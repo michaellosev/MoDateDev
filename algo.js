@@ -2,6 +2,8 @@ const fs = require('fs')
 // const people = [{name: 'michael', sex: 'male'}, {name: 'evan', sex: 'male'}, {name: 'sarah', sex: 'female'}, {name: 'rachel', sex: 'female'}];
 // const me = people.filter(person => person.name === 'michael')[0];
 const data = require('./spreadsheet');
+const matchesFromFile = require('./Matches.json')
+console.log(matchesFromFile)
 
 const G = "its got a good chance"
 const LG = "one sided match"
@@ -542,8 +544,53 @@ const test = async (title) => {
   console.log(people[318])
 }
 
+const allMatches = async () => {
+  const doc = await data.getDoc();
+  await doc.loadInfo();
+  let re = /Matches/;
+  const spreadSheetTitles = Object.keys(doc.sheetsByTitle);
+  // spreadSheetTitles.forEach(title => {
+  //   console.log(re.test(title))
+  // })
+  let arrMatches = [];
+  spreadSheetTitles.forEach(title => {
+    if (re.test(title)) {
+      arrMatches.push(title);
+    }
+  })
+  const listOfMatches = {};
+  for (let i = 0; i < arrMatches.length; i++) {
+    const curSheet = doc.sheetsByTitle[arrMatches[i]];
+    const rows = await curSheet.getRows();
+    rows.forEach(row => {
+      const girlAlias = row['_rawData'][4];
+      const guyAlias = row['_rawData'][5];
+      if (!listOfMatches.hasOwnProperty(girlAlias)) {
+        listOfMatches[girlAlias] = {[guyAlias]: 1};
+      }
+      else {
+        listOfMatches[girlAlias][guyAlias] = 1;
+      }
+      if (!listOfMatches.hasOwnProperty(guyAlias)) {
+        listOfMatches[guyAlias] = {[girlAlias]: 1};
+      }
+      else {
+        listOfMatches[guyAlias][girlAlias] = 1;
+      }
+    })
+  }
+  fs.writeFile('Matches.json', JSON.stringify(listOfMatches, null, 2), (err) => {
+      
+    // In case of a error throw err.
+    if (err) throw err;
+  })
+}
+
+// allMatches()
+
+
 // test('Form Responses 1')
 
 // console.log(getPotentialSuitors(me, people))
-addMathces('Matches (Sep 5th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)'])
+// addMathces('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 // rankAtrributes()
