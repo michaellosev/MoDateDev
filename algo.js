@@ -1,9 +1,8 @@
 const fs = require('fs')
-// const people = [{name: 'michael', sex: 'male'}, {name: 'evan', sex: 'male'}, {name: 'sarah', sex: 'female'}, {name: 'rachel', sex: 'female'}];
-// const me = people.filter(person => person.name === 'michael')[0];
 const data = require('./spreadsheet');
 const matchesFromFile = require('./Matches.json')
-console.log(matchesFromFile)
+require('dotenv').config();
+const { GoogleSpreadsheet } = require('google-spreadsheet');
 
 const G = "its got a good chance"
 const LG = "one sided match"
@@ -193,48 +192,6 @@ const checkMyersBriggs = (match, suitor, legend, myersBriggs, ranking) => {
   }
 }
 
-// const filterOnMyersBriggs = (match, people, legend, myersBriggs, ranking) => {
-//   return people.filter(person => {
-//     const result = checkMyersBriggs(match, person, legend, myersBriggs, ranking);
-//     if (result !== null && result !== R && result !== LG) {
-//       return true;
-//     }
-//     return false;
-//   })
-// }
-
-// people is array of everyone but the match
-// const getCompatibleMatches = (match, people, legend, myersBriggs, ranking) => {
-//   const females = getPotentialSuitors(match, people);
-//   const religiousMatchingFemales = filterBasedOnReligion(match, females);
-//   const myersBriggsMatches = filterOnMyersBriggs(match, religiousMatchingFemales, legend, myersBriggs, ranking);
-//   const resultingRankings = myersBriggsMatches.map(person => {
-//     let score = Object.keys(match.characteristicsP).reduce((acc, key) => {
-//       if (match.characteristicsP[key] === true && person.characteristics[key] === true) {
-//         return acc + 1;
-//       }
-//       else return acc;
-//     }, 0)
-//     const mbResult = checkMyersBriggs(match, person, legend, myersBriggs, ranking);
-//     if (mbResult === B) {
-//       score += 3;
-//     }
-//     else if (mbResult === G) {
-//       score += 2;
-//     }
-//     else {
-//       score++;
-//     }
-//     return {
-//       name: person.name,
-//       compatabilityScore: score
-//     }
-//   })
-//   resultingRankings.sort((a, b) => b.compatabilityScore - a.compatabilityScore);
-//   return resultingRankings;
-
-// }
-
 async function main(prevDocs) {
   let people = await data.getData();
   people = people.filter(person => person.inactive == 'FALSE');
@@ -247,7 +204,6 @@ async function main(prevDocs) {
   for (let i = 0; i < numPeople; i++) {
     const suitors = getPotentialSuitors(people[i], people);
     const religiousMatchingFemales = filterBasedOnReligion(people[i], suitors)
-    // const myersBriggsMatches = filterOnMyersBriggs(people[i], religiousMatchingFemales, legend, myersBriggs, Ranking);
     const resultingRankings = religiousMatchingFemales.map(person => {
       match = people[i];
       let score = Object.keys(match.characteristicsP).reduce((acc, key) => {
@@ -280,12 +236,6 @@ async function main(prevDocs) {
       sex: match.sex
     }
   }
-  // console.log(results['ENHM994'])
-  
-  // const obj = Object.keys(results).reduce((acc, cur) => {
-  //   acc[results[cur].sex] = acc.hasOwnProperty(results[cur].sex) ? acc[results[cur].sex] + 1 : 1;
-  //   return acc
-  // }, {})
 
   const keys = Object.keys(results);
 
@@ -350,6 +300,7 @@ async function main(prevDocs) {
   }
   
   const prevMatches = await filterPrevMatches(prevDocs)
+
   const numMatches = {}
   const girlMatches = {};
   for (name of Object.keys(preMatches)) {
@@ -403,18 +354,10 @@ async function main(prevDocs) {
             }
           }
         }
-        
-          // if (girlMatches.hasOwnProperty(name)) {
-          //   girlMatches[name].push(match);
-          // }
-          // else {
-          //   girlMatches[name] = [match];
-          // } 
       }
     }
   }
   return girlMatches;
-  // console.log(girlMatches)
 }
 
 async function filterPrevMatches(prevDocs) {
@@ -476,7 +419,7 @@ const rankAtrributes = async () => {
       const attrs = data.split(', ');
       attrs.forEach(attr => {
         if (result.hasOwnProperty(attr)) {
-          result[attr]++;``
+          result[attr]++;
         }
         else {
           result[attr] = 1;
@@ -528,30 +471,11 @@ const addMathces = async (title, prevDocs) => {
 
 }
 
-const test = async (title) => {
-  // const doc = await data.getDoc();
-  // await doc.loadInfo();
-  // const sheet = doc.sheetsByTitle[title];
-  // const rows = await sheet.getRows();
-  // rows.forEach(row => {
-  //   const active = row['_rawData'][2];
-  //   if (active === 'TRUE') {
-  //     console.log('true')
-  //   }
-  // })
-  const people = await data.getData();
-  // people.shift()
-  console.log(people[318])
-}
-
 const allMatches = async () => {
   const doc = await data.getDoc();
   await doc.loadInfo();
   let re = /Matches/;
   const spreadSheetTitles = Object.keys(doc.sheetsByTitle);
-  // spreadSheetTitles.forEach(title => {
-  //   console.log(re.test(title))
-  // })
   let arrMatches = [];
   spreadSheetTitles.forEach(title => {
     if (re.test(title)) {
@@ -580,17 +504,54 @@ const allMatches = async () => {
     })
   }
   fs.writeFile('Matches.json', JSON.stringify(listOfMatches, null, 2), (err) => {
-      
-    // In case of a error throw err.
     if (err) throw err;
   })
 }
 
-// allMatches()
+const test = async (title, prevDocs) => {
+  const doc = new GoogleSpreadsheet('1tA4MzdMn17AJ5psxKxenL9ixFZq1KdfOYldx06qMBro');
+  await doc.useServiceAccountAuth({
+    client_email: process.env.CLIENT_EMAIL,
+    private_key: process.env.PRIVATE_KEY
+  })
+  await doc.loadInfo();
+  if (doc.sheetsByTitle[title] !== undefined) {
+    await doc.sheetsByTitle[title].delete()
+  }
 
+  const sheet = await doc.addSheet(
+    { 
+      title: title,
+      headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
+    }
+  );
 
-// test('Form Responses 1')
+  const girlMatches = await main(prevDocs);
+  const keys = Object.keys(girlMatches);
+  const directory = await getConnectors('Form Responses 1');
+  const newRows = []
+  for (let key of keys) {
+    const guyMatches = girlMatches[key]
+    for (let guy of guyMatches) {
+      newRows.push(
+        {
+          ConnectorForGirl: directory[key][0],
+          'Girls Phone Number': directory[key][1],
+          ConnectorForGuy: directory[guy][0],
+          'Guys Phone Number': directory[guy][1],
+          girlAlias: key,
+          guyAlias: guy
+        }
+      )
+    }
+  }
+  await sheet.addRows(newRows)
+}
 
-// console.log(getPotentialSuitors(me, people))
-// addMathces('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
-// rankAtrributes()
+if (process.argv[2] === 'run') {
+  addMathces('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+}
+else if (process.argv[2] === 'test') {
+  test('Matches (Sep 13th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+}
+allMatches()
