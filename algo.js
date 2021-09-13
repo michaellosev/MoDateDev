@@ -1,66 +1,13 @@
-const fs = require('fs')
-const data = require('./spreadsheet');
-const matchesFromFile = require('./Matches.json')
-require('dotenv').config();
-const { GoogleSpreadsheet } = require('google-spreadsheet');
+import * as fs from 'fs';
+import * as data from './spreadsheet.js';
+import dotenv from 'dotenv';
+dotenv.config();
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConstants.js";
 
-const G = "its got a good chance"
-const LG = "one sided match"
-const B = "often listed as an ideal match"
-const Y = "it could work but not ideal"
-const R = "uh oh, think this one through"
-
-const Ranking = {
-  "uh oh, think this one through": 1,
-  "one sided match": 2,
-  "it could work but not ideal": 3, 
-  "its got a good chance": 4,
-  "often listed as an ideal match": 5
-}
-
-
-const legend = {
-    INFP: 0,
-    ENFP: 1,
-    INFJ: 2, 
-    ENFJ: 3,
-    INTJ: 4,
-    ENTJ: 5,
-    INTP: 6,
-    ENTP: 7,
-    ISFP: 8,
-    ESFP: 9,
-    ISTP: 10,
-    ESTP: 11,
-    ISFJ: 12,
-    ESFJ: 13,
-    ISTJ: 14,
-    ESTJ: 15
-}
-
-const myersBriggs = [
-  [G, G, G, B, G, B, G, G, R, R, R, R, R, R, R, R],
-  [G, G, B, G, B, G, G, G, R, R, R, R, R, R, R, R],
-  [G, B, G, G, G, G, G, B, R, R, R, R, R, R, R, R],
-  [B, G, G, G, G, G, G, G, B, R, R, R, R, R, R, R],
-  [G, B, G, G, G, G, G, B, LG, LG, LG, LG, Y, Y, Y, Y],
-  [B, G, G, G, G, G, B, G, LG, LG, LG, LG, LG, LG, LG, LG],
-  [G, G, G, G, G, B, G, G, LG, LG, LG, LG, Y, Y, Y, B],
-  [G, G, B, G, B, G, G, G, LG, LG, LG, LG, Y, Y, Y, Y], 
-  [R, R, R, B, LG, LG, LG, LG, Y, Y, Y, Y, LG, B, LG, B],
-  [R, R, R, R, LG, LG, LG, LG, Y, Y, Y, Y, B, LG, B, LG],
-  [R, R, R, R, LG, LG, LG, LG, Y, Y, Y, Y, LG, B, LG, B],
-  [R, R, R, R, LG, LG, LG, LG, Y, Y, Y, Y, B, LG, B, LG],
-  [R, R, R, R, Y, LG, Y, Y, LG, B, LG, B, G, G, G, G],
-  [R, R, R, R, Y, LG, Y, Y, B, LG, B, LG, G, G, G, G],
-  [R, R, R, R, Y, LG, Y, Y, LG, B, LG, B, G, G, G, G],
-  [R, R, R, R, Y, LG, B, Y, B, LG, B, LG, G, G, G, G]
-]
-
-const getPotentialSuitors = (match, people) => {
+const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
 }
-
 
 const filterBasedOnReligion = (match, people) => {
   return people.filter(person => {
@@ -84,11 +31,6 @@ const filterBasedOnReligion = (match, people) => {
     (person.religiousObservanceP.aliyah === "Very Important" && match.religiousObservance.aliyah !== "Yes")) {
       return false
     }
-    // else if (!isNaN(match.minAge) && !isNaN(person.minAge)) {
-    //   if ((person.age < match.minAge || person.age > match.maxAge) || (match.age < person.minAge || match.age > person.maxAge)) {
-    //     return false
-    //   }
-    // }
     else if (!isNaN(match.minAge) || !isNaN(person.minAge)) {
       if (!isNaN(match.minAge)) {
         if (person.age < match.minAge || person.age > match.maxAge) {
@@ -105,7 +47,6 @@ const filterBasedOnReligion = (match, people) => {
     else {
       return true;
     }
-    console.log(person.minAge)
   })
 }
 
@@ -162,8 +103,7 @@ const getHighestRanking = (ranking, ...args) => {
 const checkMyersBriggs = (match, suitor, legend, myersBriggs, ranking) => {
   const matchesP = getMyersBriggs(match);
   const suitorsP = getMyersBriggs(suitor);
-  // console.log(matchesP, match.alias, suitorsP, suitor.alias)
-  
+
   if (!matchesP || !suitorsP) {
     return null;
   }
@@ -202,17 +142,17 @@ async function main(prevDocs) {
   console.log(`total people: ${numPeople}\ntotal Men: ${numMen}\ntotal Females: ${numFemales}`)
   const results = {}
   for (let i = 0; i < numPeople; i++) {
-    const suitors = getPotentialSuitors(people[i], people);
+    const suitors = filterBasedOnSex(people[i], people);
     const religiousMatchingFemales = filterBasedOnReligion(people[i], suitors)
+    const match = people[i];
     const resultingRankings = religiousMatchingFemales.map(person => {
-      match = people[i];
       let score = Object.keys(match.characteristicsP).reduce((acc, key) => {
         if (match.characteristicsP[key] === true && person.characteristics[key] === true) {
           return acc + 1;
         }
         else return acc;
       }, 0)
-      const mbResult = checkMyersBriggs(match, person, legend, myersBriggs, Ranking);
+      const mbResult = checkMyersBriggs(match, person, LEGEND, MYERSBRIGGS, RANKING);
       if (mbResult === B) {
         score += 4;
       }
@@ -263,8 +203,6 @@ async function main(prevDocs) {
     return acc;
   }, [])
 
-  // console.log(females)
-  
   const prelimMatches = {};
   for (let male of males) {
     const compatiblePartners = male.compatiblePartners;
@@ -303,8 +241,8 @@ async function main(prevDocs) {
 
   const numMatches = {}
   const girlMatches = {};
-  for (name of Object.keys(preMatches)) {
-    for (match of preMatches[name]) {
+  for (const name of Object.keys(preMatches)) {
+    for (const match of preMatches[name]) {
       if (prelimMatches[match] && prelimMatches[match].includes(name)) {
         if (!prevMatches[name] || !prevMatches[name].includes(match)) {
           if (!numMatches[name] && !numMatches[match]) {
@@ -388,22 +326,18 @@ const getConnectors = async (title) => {
   const sheet = doc.sheetsByTitle[title]
   const rows = await sheet.getRows();
   rows.shift();
-  const connnectors = doc.sheetsByTitle['Connector Directory'];
-  const cRows = await connnectors.getRows();
+  const connectors = doc.sheetsByTitle['Connector Directory'];
+  const cRows = await connectors.getRows();
   const dict = {};
   cRows.forEach(row => {
     const arr = row['_rawData'];
     dict[arr[1].trim().toLowerCase()] = arr[2];
   })
-  // console.log(dict)
   const directory = {}
   rows.forEach(row => {
     const arr = row['_rawData'];
-    console.log(arr)
     directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()]];
   })
-  // console.log(dict)
-  // console.log(directory)
   return directory;
 }
 
@@ -427,10 +361,9 @@ const rankAtrributes = async () => {
       })
     }
   })
-  console.log(result)
 }
 
-const addMathces = async (title, prevDocs) => {
+const addMatches = async (title, prevDocs) => {
 
   const doc = await data.getDoc();
   await doc.loadInfo();
@@ -447,10 +380,8 @@ const addMathces = async (title, prevDocs) => {
   );
 
   const girlMatches = await main(prevDocs);
-  // console.log(girlMatches)
   const keys = Object.keys(girlMatches);
   const directory = await getConnectors('Form Responses 1');
-  // console.log(directory)
   const newRows = []
   for (let key of keys) {
     const guyMatches = girlMatches[key]
@@ -548,9 +479,13 @@ const test = async (title, prevDocs) => {
   await sheet.addRows(newRows)
 }
 
-if (process.argv[2] === 'run') {
-  addMathces('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+// Run the Algorithm
+const mode = process.argv[2];
+if (mode === 'run') {
+  addMatches('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 }
-else if (process.argv[2] === 'test') {
-  test('Matches (Sep 13th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+else if (mode === 'test') {
+  test('Matches (Sep 13th) -- run by Aaron', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+} else {
+  console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
 }
