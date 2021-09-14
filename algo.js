@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as data from './spreadsheet.js';
-import dotenv from 'dotenv';
+const fs = require('fs');
+const data = require('./spreadsheet.js');
+const dotenv = require('dotenv');
 dotenv.config();
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConstants.js";
@@ -8,7 +8,6 @@ import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConsta
 const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
 }
-
 
 const filterBasedOnReligion = (match, people) => {
   return people.filter(person => {
@@ -486,7 +485,8 @@ if (mode === 'run') {
   addMatches('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 }
 else if (mode === 'test') {
-  test('Matches (Sep 13th) -- run by Aaron', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
-} else {
+  test('Matches (Sep 13th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+} 
+else {
   console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
 }
