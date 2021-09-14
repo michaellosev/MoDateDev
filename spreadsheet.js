@@ -35,7 +35,7 @@ async function accessSpreadsheet() {
   const rows = await sheet.getRows();
   rows.shift();
   return rows.map(row => { 
-    data = row['_rawData'];
+    const data = row['_rawData'];
     const date = Date.now() - new Date(data[4]);
     const year = Math.floor(date / (1000 * 60 * 60 * 24 * 365));
     return {

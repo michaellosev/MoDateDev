@@ -84,11 +84,6 @@ const filterBasedOnReligion = (match, people) => {
     (person.religiousObservanceP.aliyah === "Very Important" && match.religiousObservance.aliyah !== "Yes")) {
       return false
     }
-    // else if (!isNaN(match.minAge) && !isNaN(person.minAge)) {
-    //   if ((person.age < match.minAge || person.age > match.maxAge) || (match.age < person.minAge || match.age > person.maxAge)) {
-    //     return false
-    //   }
-    // }
     else if (!isNaN(match.minAge) || !isNaN(person.minAge)) {
       if (!isNaN(match.minAge)) {
         if (person.age < match.minAge || person.age > match.maxAge) {
@@ -105,7 +100,6 @@ const filterBasedOnReligion = (match, people) => {
     else {
       return true;
     }
-    console.log(person.minAge)
   })
 }
 
@@ -162,7 +156,6 @@ const getHighestRanking = (ranking, ...args) => {
 const checkMyersBriggs = (match, suitor, legend, myersBriggs, ranking) => {
   const matchesP = getMyersBriggs(match);
   const suitorsP = getMyersBriggs(suitor);
-  // console.log(matchesP, match.alias, suitorsP, suitor.alias)
   
   if (!matchesP || !suitorsP) {
     return null;
@@ -204,8 +197,9 @@ async function main(prevDocs) {
   for (let i = 0; i < numPeople; i++) {
     const suitors = getPotentialSuitors(people[i], people);
     const religiousMatchingFemales = filterBasedOnReligion(people[i], suitors)
+    const match = people[i];
+    console.log(match.alias)
     const resultingRankings = religiousMatchingFemales.map(person => {
-      match = people[i];
       let score = Object.keys(match.characteristicsP).reduce((acc, key) => {
         if (match.characteristicsP[key] === true && person.characteristics[key] === true) {
           return acc + 1;
@@ -289,24 +283,26 @@ async function main(prevDocs) {
     while (i < compatiblePartners.length) {
       if (compatiblePartners[i].compatabilityScore >= 4) {
         if (preMatches.hasOwnProperty(female.person)) {
-          preMatches[female.person].push(compatiblePartners[i].name)
+          preMatches[female.person].push(compatiblePartners[i].name);
         }
         else {
-          preMatches[female.person] = [compatiblePartners[i].name]
+          preMatches[female.person] = [compatiblePartners[i].name];
         }
       }
       i++;
     }
   }
   
-  const prevMatches = await filterPrevMatches(prevDocs)
+  // const prevMatches = await filterPrevMatches(prevDocs);
+  const prevMatches = matchesFromFile;
+  // console.log(prevMatches)
 
-  const numMatches = {}
+  const numMatches = {};
   const girlMatches = {};
   for (name of Object.keys(preMatches)) {
     for (match of preMatches[name]) {
       if (prelimMatches[match] && prelimMatches[match].includes(name)) {
-        if (!prevMatches[name] || !prevMatches[name].includes(match)) {
+        if (!prevMatches[name] || !prevMatches[name].hasOwnProperty(match)) {
           if (!numMatches[name] && !numMatches[match]) {
             if (girlMatches.hasOwnProperty(name)) {
               girlMatches[name].push(match);
@@ -399,7 +395,6 @@ const getConnectors = async (title) => {
   const directory = {}
   rows.forEach(row => {
     const arr = row['_rawData'];
-    console.log(arr)
     directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()]];
   })
   // console.log(dict)
@@ -503,7 +498,7 @@ const allMatches = async () => {
       }
     })
   }
-  fs.writeFile('Matches.json', JSON.stringify(listOfMatches, null, 2), (err) => {
+  fs.writeFile('MatchesTest.json', JSON.stringify(listOfMatches, null, 2), (err) => {
     if (err) throw err;
   })
 }
@@ -552,5 +547,5 @@ if (process.argv[2] === 'run') {
   addMathces('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 }
 else if (process.argv[2] === 'test') {
-  test('Matches (Sep 13th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+  test('Matches (Sep 15th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 }
