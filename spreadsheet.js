@@ -1,6 +1,6 @@
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');
 dotenv.config();
-import { GoogleSpreadsheet } from 'google-spreadsheet';
+const { GoogleSpreadsheet } = require('google-spreadsheet');
 
 function getCharacteristics(str) {
   let arr = str.split(', ');
@@ -81,7 +81,7 @@ async function accessSpreadsheet() {
   })
 }
 
-export async function getDoc() {
+async function getDoc() {
   const doc = new GoogleSpreadsheet('1Qoeyt0e0P6qTakNMWx5g5xUz_Zj0O9u1ROa2gAvsScE');
   await doc.useServiceAccountAuth({
     client_email: process.env.CLIENT_EMAIL,
@@ -90,5 +90,5 @@ export async function getDoc() {
   return doc;
 }
 
-
-export const getData = accessSpreadsheet;
+exports.getDoc = getDoc;
+exports.getData = accessSpreadsheet;

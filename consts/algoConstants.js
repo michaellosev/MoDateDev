@@ -1,10 +1,10 @@
-export const G = "its got a good chance"
-export const LG = "one sided match"
-export const B = "often listed as an ideal match"
-export const Y = "it could work but not ideal"
-export const R = "uh oh, think this one through"
+const G = "its got a good chance"
+const LG = "one sided match"
+const B = "often listed as an ideal match"
+const Y = "it could work but not ideal"
+const R = "uh oh, think this one through"
 
-export const MYERSBRIGGS = [
+exports.MYERSBRIGGS = [
     [G, G, G, B, G, B, G, G, R, R, R, R, R, R, R, R],
     [G, G, B, G, B, G, G, G, R, R, R, R, R, R, R, R],
     [G, B, G, G, G, G, G, B, R, R, R, R, R, R, R, R],
@@ -23,7 +23,7 @@ export const MYERSBRIGGS = [
     [R, R, R, R, Y, LG, B, Y, B, LG, B, LG, G, G, G, G]
 ]
 
-export const LEGEND = {
+exports.LEGEND = {
     INFP: 0,
     ENFP: 1,
     INFJ: 2,
@@ -42,10 +42,16 @@ export const LEGEND = {
     ESTJ: 15
 }
 
-export const RANKING = {
+exports.RANKING = {
     "uh oh, think this one through": 1,
     "one sided match": 2,
     "it could work but not ideal": 3,
     "its got a good chance": 4,
     "often listed as an ideal match": 5
 }
+
+exports.G = G;
+exports.LG = LG;
+exports.B = B;
+exports.Y = Y;
+exports.R = R;

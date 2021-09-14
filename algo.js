@@ -2,8 +2,8 @@ const fs = require('fs');
 const data = require('./spreadsheet.js');
 const dotenv = require('dotenv');
 dotenv.config();
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConstants.js";
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} = require("./consts/algoConstants.js");
 
 const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
