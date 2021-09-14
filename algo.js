@@ -9,6 +9,7 @@ const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
 }
 
+
 const filterBasedOnReligion = (match, people) => {
   return people.filter(person => {
     if ((match.religiousObservanceP.kosher === "Very Important" && person.religiousObservance.kosher !== "Yes") || 
