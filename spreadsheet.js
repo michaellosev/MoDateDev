@@ -1,5 +1,6 @@
-require('dotenv').config();
-const { GoogleSpreadsheet } = require('google-spreadsheet');
+import dotenv from 'dotenv';
+dotenv.config();
+import { GoogleSpreadsheet } from 'google-spreadsheet';
 
 function getCharacteristics(str) {
   let arr = str.split(', ');
@@ -35,7 +36,7 @@ async function accessSpreadsheet() {
   const rows = await sheet.getRows();
   rows.shift();
   return rows.map(row => { 
-    data = row['_rawData'];
+    const data = row['_rawData'];
     const date = Date.now() - new Date(data[4]);
     const year = Math.floor(date / (1000 * 60 * 60 * 24 * 365));
     return {
@@ -80,7 +81,7 @@ async function accessSpreadsheet() {
   })
 }
 
-async function getDoc() {
+export async function getDoc() {
   const doc = new GoogleSpreadsheet('1Qoeyt0e0P6qTakNMWx5g5xUz_Zj0O9u1ROa2gAvsScE');
   await doc.useServiceAccountAuth({
     client_email: process.env.CLIENT_EMAIL,
@@ -90,5 +91,4 @@ async function getDoc() {
 }
 
 
-exports.getData = accessSpreadsheet;
-exports.getDoc = getDoc;
+export const getData = accessSpreadsheet;
