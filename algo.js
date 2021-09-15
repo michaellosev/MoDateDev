@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConstants.js";
+import mailer from "./mailer.js";
+import transporter from "./mailer.js";
 
 const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
@@ -477,6 +479,30 @@ const test = async (title, prevDocs) => {
     }
   }
   await sheet.addRows(newRows)
+}
+
+// send mail to connectors
+const sendMail = process.argv[3];
+if (sendMail === "send") {
+  transporter.verify((err, success) => {
+    err
+        ? console.log(err)
+        : console.log(`=== Ready to send mail: ${success} ===`);
+  });
+  const mailOptions = {
+    from: "test@gmail.com",
+    to: process.env.EMAIL,
+    subject: "Nodemailer API",
+    text: "Hi from your nodemailer API",
+  };
+
+  mailer.sendMail(mailOptions, function (err, data) {
+    if (err) {
+      console.log("Error " + err);
+    } else {
+      console.log("Email sent successfully");
+    }
+  });
 }
 
 // Run the Algorithm
