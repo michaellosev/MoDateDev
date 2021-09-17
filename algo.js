@@ -491,7 +491,7 @@ if (sendMail === "send") {
   });
   const mailOptions = {
     from: "test@gmail.com",
-    to: process.env.EMAIL,
+    to: process.env.EMAIL_RECIPIENT,
     subject: "Nodemailer API",
     text: "Hi from your nodemailer API",
   };
