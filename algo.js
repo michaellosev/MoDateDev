@@ -394,6 +394,18 @@ const addMatches = async (title) => {
   for (let key of keys) {
     const guyMatches = girlMatches[key]
     for (let guy of guyMatches) {
+      if (!jsonObj.hasOwnProperty(key)) {
+        jsonObj[key] = {[guy]: 1};
+      }
+      else {
+        jsonObj[key][guy] = 1;
+      }
+      if (!jsonObj.hasOwnProperty(guy)) {
+        jsonObj[guy] = {[key]: 1};
+      }
+      else {
+        jsonObj[guy][key] = 1;
+      }
       newRows.push(
         {
           ConnectorForGirl: directory[key][0],
@@ -407,7 +419,9 @@ const addMatches = async (title) => {
     }
   }
   await sheet.addRows(newRows)
-
+  fs.writeFile('Matches.json', JSON.stringify(jsonObj, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
+  })
 }
 
 const allMatches = async () => {
@@ -466,7 +480,6 @@ const test = async (title, jsonObj) => {
   );
 
   const girlMatches = await main();
-  console.log(girlMatches)
   const keys = Object.keys(girlMatches);
   const directory = await getConnectors('Form Responses 1');
   const newRows = []
@@ -498,7 +511,7 @@ const test = async (title, jsonObj) => {
     }
   }
   await sheet.addRows(newRows)
-  fs.writeFile('Matches.json', JSON.stringify(jsonObj, null, 2), { flag: 'w+' }, (err) => {
+  fs.writeFile('MatchesTest.json', JSON.stringify(jsonObj, null, 2), { flag: 'w+' }, (err) => {
     if (err) throw err;
   })
 }
