@@ -6,6 +6,12 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConstants.js";
 import mailer from "./mailer.js";
 import transporter from "./mailer.js";
+import { readFile } from 'fs/promises';
+const jsonObj = JSON.parse(
+  await readFile(
+    new URL('./Matches.json', import.meta.url)
+  )
+);
 
 const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
@@ -134,7 +140,7 @@ const checkMyersBriggs = (match, suitor, legend, myersBriggs, ranking) => {
   }
 }
 
-async function main(prevDocs) {
+async function main() {
   let people = await data.getData();
   people = people.filter(person => person.inactive == 'FALSE');
   const numPeople = people.length;
@@ -239,14 +245,14 @@ async function main(prevDocs) {
     }
   }
   
-  const prevMatches = await filterPrevMatches(prevDocs)
+  const prevMatches = jsonObj;
 
   const numMatches = {}
   const girlMatches = {};
   for (const name of Object.keys(preMatches)) {
     for (const match of preMatches[name]) {
       if (prelimMatches[match] && prelimMatches[match].includes(name)) {
-        if (!prevMatches[name] || !prevMatches[name].includes(match)) {
+        if (!prevMatches[name] || !prevMatches[name].hasOwnProperty(match)) {
           if (!numMatches[name] && !numMatches[match]) {
             if (girlMatches.hasOwnProperty(name)) {
               girlMatches[name].push(match);
@@ -365,7 +371,7 @@ const rankAtrributes = async () => {
   })
 }
 
-const addMatches = async (title, prevDocs) => {
+const addMatches = async (title) => {
 
   const doc = await data.getDoc();
   await doc.loadInfo();
@@ -381,7 +387,7 @@ const addMatches = async (title, prevDocs) => {
     }
   );
 
-  const girlMatches = await main(prevDocs);
+  const girlMatches = await main();
   const keys = Object.keys(girlMatches);
   const directory = await getConnectors('Form Responses 1');
   const newRows = []
@@ -441,7 +447,7 @@ const allMatches = async () => {
   })
 }
 
-const test = async (title, prevDocs) => {
+const test = async (title, jsonObj) => {
   const doc = new GoogleSpreadsheet('1tA4MzdMn17AJ5psxKxenL9ixFZq1KdfOYldx06qMBro');
   await doc.useServiceAccountAuth({
     client_email: process.env.CLIENT_EMAIL,
@@ -459,13 +465,26 @@ const test = async (title, prevDocs) => {
     }
   );
 
-  const girlMatches = await main(prevDocs);
+  const girlMatches = await main();
+  console.log(girlMatches)
   const keys = Object.keys(girlMatches);
   const directory = await getConnectors('Form Responses 1');
   const newRows = []
   for (let key of keys) {
     const guyMatches = girlMatches[key]
     for (let guy of guyMatches) {
+      if (!jsonObj.hasOwnProperty(key)) {
+        jsonObj[key] = {[guy]: 1};
+      }
+      else {
+        jsonObj[key][guy] = 1;
+      }
+      if (!jsonObj.hasOwnProperty(guy)) {
+        jsonObj[guy] = {[key]: 1};
+      }
+      else {
+        jsonObj[guy][key] = 1;
+      }
       newRows.push(
         {
           ConnectorForGirl: directory[key][0],
@@ -479,6 +498,9 @@ const test = async (title, prevDocs) => {
     }
   }
   await sheet.addRows(newRows)
+  fs.writeFile('Matches.json', JSON.stringify(jsonObj, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
+  })
 }
 
 // send mail to connectors
@@ -511,7 +533,7 @@ if (mode === 'run') {
   addMatches('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 }
 else if (mode === 'test') {
-  test('Matches (Sep 13th) -- run by Aaron', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+  test('Matches (Sep 13th) -- run by michael', jsonObj)
 } else {
   console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
 }
