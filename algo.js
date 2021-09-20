@@ -546,7 +546,22 @@ if (mode === 'run') {
   addMatches('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 }
 else if (mode === 'test') {
-  test('Matches (Sep 13th) -- run by michael', jsonObj)
-} else {
+  test('Matches (Sep 19th) -- run by michael', jsonObj)
+} 
+else if (mode === 'success') {
+  const path = './MatchesTest.json';
+  fs.exists(path, isExist => {
+    if (isExist) {
+      console.log("exists:", path);
+      fs.rename(path, './Matches.json', function (err) {
+        if (err) throw err;
+        console.log('File Renamed.');
+      });
+    } else {
+      console.log("DOES NOT exist:", path);
+    }
+  })
+}
+else {
   console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
 }
