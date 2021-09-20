@@ -460,6 +460,14 @@ const test = async (title, prevDocs) => {
   );
 
   const girlMatches = await main(prevDocs);
+  const emailData = await dataForEmail(girlMatches);
+  const connectors = Object.keys(emailData);
+  for (let i = 0; i < connectors.length; i++) {
+    const message = createMessage(connectors[i], emailData[connectors[i]]);
+    if (connectors[i] === 'Evan Harris') {
+      sendEmail('harrisevan114@gmail.com', message)
+    }
+  }
   const keys = Object.keys(girlMatches);
   const directory = await getConnectors('Form Responses 1');
   const newRows = []
@@ -481,9 +489,104 @@ const test = async (title, prevDocs) => {
   await sheet.addRows(newRows)
 }
 
+const dataForEmail = async (results) => {
+  const people = await data.getData();
+  const peopleDirecotry = people.reduce((acc, cur) => {
+    acc[cur.alias] = cur;
+    return acc;
+  }, {});
+  const connectorResult = {};
+  const connectorDirectory = await getConnectors('Form Responses 1');
+  const keys = Object.keys(results);
+  for (let i = 0; i < keys.length; i++) {
+    const girlMatch = keys[i];
+    results[girlMatch].forEach(guyMatch => {
+      // add to the girls connectors email list
+      const girlsConnector = peopleDirecotry[girlMatch].connectorName;
+      if (connectorResult.hasOwnProperty(girlsConnector)) {
+        if (connectorResult[girlsConnector].hasOwnProperty(girlMatch)) {
+          connectorResult[girlsConnector][girlMatch].push(
+            {
+              alias: guyMatch,
+              age: peopleDirecotry[guyMatch].age,
+              location: peopleDirecotry[guyMatch].location,
+              connectorName: connectorDirectory[guyMatch][0],
+              connectorNumber: connectorDirectory[guyMatch][1]
+            }
+          )
+        }
+        else {
+          connectorResult[girlsConnector][girlMatch] = [
+            {
+              alias: guyMatch,
+              age: peopleDirecotry[guyMatch].age,
+              location: peopleDirecotry[guyMatch].location,
+              connectorName: connectorDirectory[guyMatch][0],
+              connectorNumber: connectorDirectory[guyMatch][1]
+            }
+          ]
+        }
+      }
+      else {
+        connectorResult[girlsConnector] = {
+          [girlMatch]: [
+            {
+              alias: guyMatch,
+              age: peopleDirecotry[guyMatch].age,
+              location: peopleDirecotry[guyMatch].location,
+              connectorName: connectorDirectory[guyMatch][0],
+              connectorNumber: connectorDirectory[guyMatch][1]
+            }
+          ]
+        }
+      }
+      // add to the guys connectors email list
+      const guysConnector = peopleDirecotry[guyMatch].connectorName;
+      if (connectorResult.hasOwnProperty(guysConnector)) {
+        if (connectorResult[guysConnector].hasOwnProperty(guyMatch)) {
+          connectorResult[guysConnector][guyMatch].push(
+            {
+              alias: girlMatch,
+              age: peopleDirecotry[girlMatch].age,
+              location: peopleDirecotry[girlMatch].location,
+              connectorName: connectorDirectory[girlMatch][0],
+              connectorNumber: connectorDirectory[girlMatch][1]
+            }
+          )
+        }
+        else {
+          connectorResult[guysConnector][guyMatch] = [
+            {
+              alias: girlMatch,
+              age: peopleDirecotry[girlMatch].age,
+              location: peopleDirecotry[girlMatch].location,
+              connectorName: connectorDirectory[girlMatch][0],
+              connectorNumber: connectorDirectory[girlMatch][1]
+            }
+          ]
+        }
+      }
+      else {
+        connectorResult[guysConnector] = {
+          [guyMatch]: [
+            {
+              alias: girlMatch,
+              age: peopleDirecotry[girlMatch].age,
+              location: peopleDirecotry[girlMatch].location,
+              connectorName: connectorDirectory[girlMatch][0],
+              connectorNumber: connectorDirectory[girlMatch][1]
+            }
+          ]
+        }
+      }
+    })
+  }
+  return connectorResult;
+}
+
 // send mail to connectors
-const sendMail = process.argv[3];
-if (sendMail === "send") {
+
+const sendEmail = (recipient, message) => {
   transporter.verify((err, success) => {
     err
         ? console.log(err)
@@ -491,9 +594,9 @@ if (sendMail === "send") {
   });
   const mailOptions = {
     from: "test@gmail.com",
-    to: process.env.EMAIL_RECIPIENT,
+    to: recipient,
     subject: "Nodemailer API",
-    text: "Hi from your nodemailer API",
+    html: message
   };
 
   mailer.sendMail(mailOptions, function (err, data) {
@@ -505,13 +608,41 @@ if (sendMail === "send") {
   });
 }
 
+const createMessage = (connector, emailData) => {
+
+  let message = (`
+    <h2>Hi ${connector},</h2>
+    <p>Here are your matches for this week:</p>
+  `)
+  const matches = Object.keys(emailData);
+  for (let i = 0; i < matches.length; i++) {
+    const curAlias = matches[i];
+    const curAliasMatches = emailData[curAlias];
+    message += `<h3>Matches for ${curAlias}:</h3><ul>`
+    for (let j = 0; j < curAliasMatches.length; j++) {
+      message += (`
+        <li> ${curAliasMatches[j].alias}, aged ${curAliasMatches[j].age}, located in ${curAliasMatches[j].location}. Reach out to ${curAliasMatches[j].connectorName} for more details: ${curAliasMatches[j].connectorNumber}.</li>
+      `)
+    }
+    message += '</ul>'
+  }
+  message += `<p>We appreciate your hard work, etc.</p><p>- MoDate Team</p>`;
+  return message;
+}
+
+const sendMail = process.argv[3];
+if (sendMail === "send") {
+  sendEmail(process.env.EMAIL_RECIPIENT, createMessage())
+}
+
 // Run the Algorithm
 const mode = process.argv[2];
 if (mode === 'run') {
   addMatches('Matches (Sep 12th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 }
 else if (mode === 'test') {
-  test('Matches (Sep 13th) -- run by Aaron', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
+  test('Matches (Sep 20th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
 } else {
   console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
+  dataForEmail()
 }
