@@ -465,7 +465,8 @@ const test = async (title, prevDocs) => {
   for (let i = 0; i < connectors.length; i++) {
     const message = createMessage(connectors[i], emailData[connectors[i]]);
     if (connectors[i] === 'Evan Harris') {
-      sendEmail('harrisevan114@gmail.com', message)
+      console.log(message)
+      sendEmail('aaronhpriven@gmail.com', message)
     }
   }
   const keys = Object.keys(girlMatches);
@@ -611,22 +612,24 @@ const sendEmail = (recipient, message) => {
 const createMessage = (connector, emailData) => {
 
   let message = (`
-    <h2>Hi ${connector},</h2>
-    <p>Here are your matches for this week:</p>
+    <div style="background: rgb(197,194,212);
+    background: linear-gradient(90deg, rgba(197,194,212,1) 0%, rgba(218,170,170,1) 51%, rgba(189,182,214,1) 100%); border-radius:20px; display:flex; justify-content:center; flex-direction:column; padding:10px; font-family:monospace">
+    <h2 style="justify-content:center">Hi ${connector},</h2>
+    <p>Here are your matches for this week:</p><div>
   `)
   const matches = Object.keys(emailData);
   for (let i = 0; i < matches.length; i++) {
     const curAlias = matches[i];
     const curAliasMatches = emailData[curAlias];
-    message += `<h3>Matches for ${curAlias}:</h3><ul>`
+    message += `<h3>Matches for ${curAlias}:</h3><div>`
     for (let j = 0; j < curAliasMatches.length; j++) {
       message += (`
-        <li> ${curAliasMatches[j].alias}, aged ${curAliasMatches[j].age}, located in ${curAliasMatches[j].location}. Reach out to ${curAliasMatches[j].connectorName} for more details: ${curAliasMatches[j].connectorNumber}.</li>
+        <div style="margin:10px">-->  ${curAliasMatches[j].alias}, aged ${curAliasMatches[j].age}, located in ${curAliasMatches[j].location}. Reach out to ${curAliasMatches[j].connectorName} for more details: ${curAliasMatches[j].connectorNumber}.</div>
       `)
     }
-    message += '</ul>'
+    message += '</div>'
   }
-  message += `<p>We appreciate your hard work, etc.</p><p>- MoDate Team</p>`;
+  message += `</div><p>We appreciate your hard work, etc.</p><p>- MoDate Team</p></div>`;
   return message;
 }
 
