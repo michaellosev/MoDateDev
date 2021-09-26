@@ -542,6 +542,7 @@ if (sendMail === "send") {
 
 // Run the Algorithm
 const mode = process.argv[2];
+
 if (mode === 'run') {
   addMatches('Matches (Sep 19th)', jsonObj);
 }
