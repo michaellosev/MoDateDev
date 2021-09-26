@@ -6,6 +6,9 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConstants.js";
 import mailer from "./mailer.js";
 import transporter from "./mailer.js";
+const DOC = await data.getDoc();
+await DOC.loadInfo();
+
 
 const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
@@ -322,9 +325,7 @@ async function filterPrevMatches(prevDocs) {
   return result;
 }
 
-const getConnectors = async (title) => {
-  const doc = await data.getDoc();
-  await doc.loadInfo();
+const getConnectors = async (title, doc) => {
   const sheet = doc.sheetsByTitle[title]
   const rows = await sheet.getRows();
   rows.shift();
@@ -333,12 +334,12 @@ const getConnectors = async (title) => {
   const dict = {};
   cRows.forEach(row => {
     const arr = row['_rawData'];
-    dict[arr[1].trim().toLowerCase()] = arr[2];
+    dict[arr[1].trim().toLowerCase()] = [arr[2], arr[4]];
   })
   const directory = {}
   rows.forEach(row => {
     const arr = row['_rawData'];
-    directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()]];
+    directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()][0], dict[arr[3].trim().toLowerCase()][1]];
   })
   return directory;
 }
@@ -383,7 +384,7 @@ const addMatches = async (title, prevDocs) => {
 
   const girlMatches = await main(prevDocs);
   const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('Form Responses 1');
+  const directory = await getConnectors('Form Responses 1', DOC);
   const newRows = []
   for (let key of keys) {
     const guyMatches = girlMatches[key]
@@ -463,16 +464,16 @@ const test = async (title, prevDocs) => {
   const emailData = await dataForEmail(girlMatches);
   const connectors = Object.keys(emailData);
   console.log(emailData)
-  // for (let i = 0; i < connectors.length; i++) {
-  //   const message = createMessage(connectors[i], emailData[connectors[i]]);
-  //   if (connectors[i] === 'Evan Harris') {
-  //     for(let h = 0; h < 3; h++) {
-  //       sendEmail('michaellosev75@gmail.com', message)
-  //     }
-  //   }
-  // }
+  for (let i = 0; i < connectors.length; i++) {
+    const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+    if (connectors[i] === 'Evan Harris') {
+      for(let h = 0; h < 3; h++) {
+        sendEmail('michaellosev75@gmail.com', message)
+      }
+    }
+  }
   const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('Form Responses 1');
+  const directory = await getConnectors('Form Responses 1', DOC);
   const newRows = []
   for (let key of keys) {
     const guyMatches = girlMatches[key]
@@ -499,7 +500,7 @@ const dataForEmail = async (results) => {
     return acc;
   }, {});
   const connectorResult = {};
-  const connectorDirectory = await getConnectors('Form Responses 1');
+  const connectorDirectory = await getConnectors('Form Responses 1', DOC);
   const keys = Object.keys(results);
   for (let i = 0; i < keys.length; i++) {
     const girlMatch = keys[i];
@@ -507,8 +508,8 @@ const dataForEmail = async (results) => {
       // add to the girls connectors email list
       const girlsConnector = peopleDirecotry[girlMatch].connectorName;
       if (connectorResult.hasOwnProperty(girlsConnector)) {
-        if (connectorResult[girlsConnector].hasOwnProperty(girlMatch)) {
-          connectorResult[girlsConnector][girlMatch].push(
+        if (connectorResult[girlsConnector]['matches'].hasOwnProperty(girlMatch)) {
+          connectorResult[girlsConnector]['matches'][girlMatch].push(
             {
               alias: guyMatch,
               age: peopleDirecotry[guyMatch].age,
@@ -519,7 +520,7 @@ const dataForEmail = async (results) => {
           )
         }
         else {
-          connectorResult[girlsConnector][girlMatch] = [
+          connectorResult[girlsConnector]['matches'][girlMatch] = [
             {
               alias: guyMatch,
               age: peopleDirecotry[guyMatch].age,
@@ -532,22 +533,25 @@ const dataForEmail = async (results) => {
       }
       else {
         connectorResult[girlsConnector] = {
-          [girlMatch]: [
-            {
-              alias: guyMatch,
-              age: peopleDirecotry[guyMatch].age,
-              location: peopleDirecotry[guyMatch].location,
-              connectorName: connectorDirectory[guyMatch][0],
-              connectorNumber: connectorDirectory[guyMatch][1]
-            }
-          ]
+          matches: {
+            [girlMatch]: [
+              {
+                alias: guyMatch,
+                age: peopleDirecotry[guyMatch].age,
+                location: peopleDirecotry[guyMatch].location,
+                connectorName: connectorDirectory[guyMatch][0],
+                connectorNumber: connectorDirectory[guyMatch][1]
+              }
+            ]
+          }
         }
+        connectorResult[girlsConnector]['email'] = connectorDirectory[girlMatch][2];
       }
       // add to the guys connectors email list
       const guysConnector = peopleDirecotry[guyMatch].connectorName;
       if (connectorResult.hasOwnProperty(guysConnector)) {
-        if (connectorResult[guysConnector].hasOwnProperty(guyMatch)) {
-          connectorResult[guysConnector][guyMatch].push(
+        if (connectorResult[guysConnector]['matches'].hasOwnProperty(guyMatch)) {
+          connectorResult[guysConnector]['matches'][guyMatch].push(
             {
               alias: girlMatch,
               age: peopleDirecotry[girlMatch].age,
@@ -558,7 +562,7 @@ const dataForEmail = async (results) => {
           )
         }
         else {
-          connectorResult[guysConnector][guyMatch] = [
+          connectorResult[guysConnector]['matches'][guyMatch] = [
             {
               alias: girlMatch,
               age: peopleDirecotry[girlMatch].age,
@@ -571,16 +575,19 @@ const dataForEmail = async (results) => {
       }
       else {
         connectorResult[guysConnector] = {
-          [guyMatch]: [
-            {
-              alias: girlMatch,
-              age: peopleDirecotry[girlMatch].age,
-              location: peopleDirecotry[girlMatch].location,
-              connectorName: connectorDirectory[girlMatch][0],
-              connectorNumber: connectorDirectory[girlMatch][1]
-            }
-          ]
+          matches: {
+            [guyMatch]: [
+              {
+                alias: girlMatch,
+                age: peopleDirecotry[girlMatch].age,
+                location: peopleDirecotry[girlMatch].location,
+                connectorName: connectorDirectory[girlMatch][0],
+                connectorNumber: connectorDirectory[girlMatch][1]
+              }
+            ]
+          }
         }
+        connectorResult[guysConnector]['email'] = connectorDirectory[guyMatch][2];
       }
     })
   }
