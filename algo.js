@@ -462,13 +462,15 @@ const test = async (title, prevDocs) => {
   const girlMatches = await main(prevDocs);
   const emailData = await dataForEmail(girlMatches);
   const connectors = Object.keys(emailData);
-  for (let i = 0; i < connectors.length; i++) {
-    const message = createMessage(connectors[i], emailData[connectors[i]]);
-    if (connectors[i] === 'Evan Harris') {
-      console.log(message)
-      sendEmail('aaronhpriven@gmail.com', message)
-    }
-  }
+  console.log(emailData)
+  // for (let i = 0; i < connectors.length; i++) {
+  //   const message = createMessage(connectors[i], emailData[connectors[i]]);
+  //   if (connectors[i] === 'Evan Harris') {
+  //     for(let h = 0; h < 3; h++) {
+  //       sendEmail('michaellosev75@gmail.com', message)
+  //     }
+  //   }
+  // }
   const keys = Object.keys(girlMatches);
   const directory = await getConnectors('Form Responses 1');
   const newRows = []
@@ -612,10 +614,11 @@ const sendEmail = (recipient, message) => {
 const createMessage = (connector, emailData) => {
 
   let message = (`
-    <div style="background: rgb(197,194,212);
-    background: linear-gradient(90deg, rgba(197,194,212,1) 0%, rgba(218,170,170,1) 51%, rgba(189,182,214,1) 100%); border-radius:20px; display:flex; justify-content:center; flex-direction:column; padding:10px; font-family:monospace">
-    <h2 style="justify-content:center">Hi ${connector},</h2>
-    <p>Here are your matches for this week:</p><div>
+    <div style="background: rgb(197,194,212); background: linear-gradient(90deg, rgba(197,194,212,1) 0%, rgba(218,170,170,1) 51%, rgba(189,182,214,1) 100%); border-radius:20px; padding:10px; font-family:monospace;">
+      <div>
+        <h2>Hi ${connector},</h2>
+        <p>Here are your matches for this week:</p>
+      </div>
   `)
   const matches = Object.keys(emailData);
   for (let i = 0; i < matches.length; i++) {
@@ -629,7 +632,7 @@ const createMessage = (connector, emailData) => {
     }
     message += '</div>'
   }
-  message += `</div><p>We appreciate your hard work, etc.</p><p>- MoDate Team</p></div>`;
+  message += `<p>We appreciate your hard work, etc.</p><p>- MoDate</p></div>`;
   return message;
 }
 
