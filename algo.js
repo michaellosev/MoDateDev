@@ -2,16 +2,19 @@ import * as fs from 'fs';
 import * as data from './spreadsheet.js';
 import dotenv from 'dotenv';
 dotenv.config();
-import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConstants.js";
 import mailer from "./mailer.js";
 import transporter from "./mailer.js";
 import { readFile } from 'fs/promises';
-const jsonObj = JSON.parse(
+
+const prevMatches = JSON.parse(
   await readFile(
     new URL('./Matches.json', import.meta.url)
   )
 );
+
+const spreadSheet = await data.getDocument();
+await spreadSheet.loadInfo()
 
 const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
@@ -140,7 +143,7 @@ const checkMyersBriggs = (match, suitor, legend, myersBriggs, ranking) => {
   }
 }
 
-async function main() {
+async function generateMatches(prevMatches) {
   let people = await data.getData();
   people = people.filter(person => person.inactive == 'FALSE');
   const numPeople = people.length;
@@ -244,8 +247,6 @@ async function main() {
       i++;
     }
   }
-  
-  const prevMatches = jsonObj;
 
   const numMatches = {}
   const girlMatches = {};
@@ -306,12 +307,10 @@ async function main() {
   return girlMatches;
 }
 
-async function filterPrevMatches(prevDocs) {
-  const doc = await data.getDoc();
-  await doc.loadInfo();
+async function filterPrevMatches(prevDocs, document) {
   const result = {}
   for (let i = 0; i < prevDocs.length; i++) {
-    const sheet = doc.sheetsByTitle[prevDocs[i]]
+    const sheet = documet.sheetsByTitle[prevDocs[i]]
     const rows = await sheet.getRows();
     rows.forEach(row => {
       const arr = row['_rawData'];
@@ -328,13 +327,11 @@ async function filterPrevMatches(prevDocs) {
   return result;
 }
 
-const getConnectors = async (title) => {
-  const doc = await data.getDoc();
-  await doc.loadInfo();
-  const sheet = doc.sheetsByTitle[title]
+const getConnectors = async (title, document) => {
+  const sheet = document.sheetsByTitle[title]
   const rows = await sheet.getRows();
   rows.shift();
-  const connectors = doc.sheetsByTitle['Connector Directory'];
+  const connectors = document.sheetsByTitle['Connector Directory'];
   const cRows = await connectors.getRows();
   const dict = {};
   cRows.forEach(row => {
@@ -371,40 +368,37 @@ const rankAtrributes = async () => {
   })
 }
 
-const addMatches = async (title, jsonObj) => {
+const addMatches = async (title, prevMatches, fileName, document) => {
 
-  const doc = await data.getDoc();
-  await doc.loadInfo();
-
-  if (doc.sheetsByTitle[title] !== undefined) {
-    await doc.sheetsByTitle[title].delete()
+  if (document.sheetsByTitle[title] !== undefined) {
+    await document.sheetsByTitle[title].delete()
   }
 
-  const sheet = await doc.addSheet(
+  const sheet = await document.addSheet(
     { 
       title: title,
       headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
     }
   );
 
-  const girlMatches = await main();
+  const girlMatches = await generateMatches(prevMatches);
   const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('Form Responses 1');
+  const directory = await getConnectors('Form Responses 1', document);
   const newRows = []
   for (let key of keys) {
     const guyMatches = girlMatches[key]
     for (let guy of guyMatches) {
-      if (!jsonObj.hasOwnProperty(key)) {
-        jsonObj[key] = {[guy]: 1};
+      if (!prevMatches.hasOwnProperty(key)) {
+        prevMatches[key] = {[guy]: 1};
       }
       else {
-        jsonObj[key][guy] = 1;
+        prevMatches[key][guy] = 1;
       }
-      if (!jsonObj.hasOwnProperty(guy)) {
-        jsonObj[guy] = {[key]: 1};
+      if (!prevMatches.hasOwnProperty(guy)) {
+        prevMatches[guy] = {[key]: 1};
       }
       else {
-        jsonObj[guy][key] = 1;
+        prevMatches[guy][key] = 1;
       }
       newRows.push(
         {
@@ -419,102 +413,45 @@ const addMatches = async (title, jsonObj) => {
     }
   }
   await sheet.addRows(newRows)
-  fs.writeFile('Matches.json', JSON.stringify(jsonObj, null, 2), { flag: 'w+' }, (err) => {
+  fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
     if (err) throw err;
   })
 }
 
-const allMatches = async () => {
-  const doc = await data.getDoc();
-  await doc.loadInfo();
-  let re = /Matches/;
-  const spreadSheetTitles = Object.keys(doc.sheetsByTitle);
-  let arrMatches = [];
-  spreadSheetTitles.forEach(title => {
-    if (re.test(title)) {
-      arrMatches.push(title);
-    }
-  })
-  const listOfMatches = {};
-  for (let i = 0; i < arrMatches.length; i++) {
-    const curSheet = doc.sheetsByTitle[arrMatches[i]];
-    const rows = await curSheet.getRows();
-    rows.forEach(row => {
-      const girlAlias = row['_rawData'][4];
-      const guyAlias = row['_rawData'][5];
-      if (!listOfMatches.hasOwnProperty(girlAlias)) {
-        listOfMatches[girlAlias] = {[guyAlias]: 1};
-      }
-      else {
-        listOfMatches[girlAlias][guyAlias] = 1;
-      }
-      if (!listOfMatches.hasOwnProperty(guyAlias)) {
-        listOfMatches[guyAlias] = {[girlAlias]: 1};
-      }
-      else {
-        listOfMatches[guyAlias][girlAlias] = 1;
-      }
-    })
-  }
-  fs.writeFile('Matches.json', JSON.stringify(listOfMatches, null, 2), (err) => {
-    if (err) throw err;
-  })
-}
-
-const test = async (title, jsonObj) => {
-  const doc = new GoogleSpreadsheet('1tA4MzdMn17AJ5psxKxenL9ixFZq1KdfOYldx06qMBro');
-  await doc.useServiceAccountAuth({
-    client_email: process.env.CLIENT_EMAIL,
-    private_key: process.env.PRIVATE_KEY
-  })
-  await doc.loadInfo();
-  if (doc.sheetsByTitle[title] !== undefined) {
-    await doc.sheetsByTitle[title].delete()
-  }
-
-  const sheet = await doc.addSheet(
-    { 
-      title: title,
-      headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
-    }
-  );
-
-  const girlMatches = await main();
-  const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('Form Responses 1');
-  const newRows = []
-  for (let key of keys) {
-    const guyMatches = girlMatches[key]
-    for (let guy of guyMatches) {
-      if (!jsonObj.hasOwnProperty(key)) {
-        jsonObj[key] = {[guy]: 1};
-      }
-      else {
-        jsonObj[key][guy] = 1;
-      }
-      if (!jsonObj.hasOwnProperty(guy)) {
-        jsonObj[guy] = {[key]: 1};
-      }
-      else {
-        jsonObj[guy][key] = 1;
-      }
-      newRows.push(
-        {
-          ConnectorForGirl: directory[key][0],
-          'Girls Phone Number': directory[key][1],
-          ConnectorForGuy: directory[guy][0],
-          'Guys Phone Number': directory[guy][1],
-          girlAlias: key,
-          guyAlias: guy
-        }
-      )
-    }
-  }
-  await sheet.addRows(newRows)
-  fs.writeFile('MatchesTest.json', JSON.stringify(jsonObj, null, 2), { flag: 'w+' }, (err) => {
-    if (err) throw err;
-  })
-}
+// const allMatches = async (document) => {
+//   let re = /Matches/;
+//   const spreadSheetTitles = Object.keys(document.sheetsByTitle);
+//   let arrMatches = [];
+//   spreadSheetTitles.forEach(title => {
+//     if (re.test(title)) {
+//       arrMatches.push(title);
+//     }
+//   })
+//   const listOfMatches = {};
+//   for (let i = 0; i < arrMatches.length; i++) {
+//     const curSheet = doc.sheetsByTitle[arrMatches[i]];
+//     const rows = await curSheet.getRows();
+//     rows.forEach(row => {
+//       const girlAlias = row['_rawData'][4];
+//       const guyAlias = row['_rawData'][5];
+//       if (!listOfMatches.hasOwnProperty(girlAlias)) {
+//         listOfMatches[girlAlias] = {[guyAlias]: 1};
+//       }
+//       else {
+//         listOfMatches[girlAlias][guyAlias] = 1;
+//       }
+//       if (!listOfMatches.hasOwnProperty(guyAlias)) {
+//         listOfMatches[guyAlias] = {[girlAlias]: 1};
+//       }
+//       else {
+//         listOfMatches[guyAlias][girlAlias] = 1;
+//       }
+//     })
+//   }
+//   fs.writeFile('MatchesTest.json', JSON.stringify(listOfMatches, null, 2), (err) => {
+//     if (err) throw err;
+//   })
+// }
 
 // send mail to connectors
 const sendMail = process.argv[3];
@@ -544,10 +481,10 @@ if (sendMail === "send") {
 const mode = process.argv[2];
 
 if (mode === 'run') {
-  addMatches('Matches (Sep 19th)', jsonObj);
+  addMatches(new Date().toLocaleDateString(), prevMatches, 'MatchesTest.json', spreadSheet);
 }
 else if (mode === 'test') {
-  test('Matches (Sep 19th) -- run by michael', jsonObj);
+  addMatches(new Date().toLocaleDateString(), prevMatches, 'MatchesTest.json', spreadSheet); 
 } 
 else if (mode === 'success') {
   const path = './MatchesTest.json';
