@@ -4,7 +4,7 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 
 let apiKey = null;
 
-if (process.argv[2] === 'run') {
+if (process.argv[2] === 'dev') {
   apiKey = process.env.DEV_KEY;
 }
 else if (process.argv[2] === 'test') {

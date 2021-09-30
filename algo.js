@@ -362,17 +362,6 @@ const addMatches = async (title, prevMatches, fileName, document) => {
   );
 
   const girlMatches = await generateMatches(prevMatches);
-  const emailData = await dataForEmail(girlMatches, document);
-  const connectors = Object.keys(emailData);
-  console.log(emailData)
-  for (let i = 0; i < connectors.length; i++) {
-    const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-    if (connectors[i] === 'Evan Harris') {
-      for(let h = 0; h < 3; h++) {
-        sendEmail('michaellosev75@gmail.com', message)
-      }
-    }
-  }
   const keys = Object.keys(girlMatches);
   const directory = await getConnectors('Form Responses 1', document);
   const newRows = []
@@ -404,6 +393,9 @@ const addMatches = async (title, prevMatches, fileName, document) => {
     }
   }
   await sheet.addRows(newRows)
+  fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
+  })
   fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
     if (err) throw err;
   })
@@ -529,7 +521,7 @@ const sendEmail = (recipient, message) => {
     if (err) {
       console.log("Error " + err);
     } else {
-      console.log("Email sent successfully");
+      console.log(`Email sent successfully to ${recipient}`);
     }
   });
 }
@@ -537,7 +529,7 @@ const sendEmail = (recipient, message) => {
 const createMessage = (connector, emailData) => {
 
   let message = (`
-    <div style="background: rgb(197,194,212); background: linear-gradient(90deg, rgba(197,194,212,1) 0%, rgba(218,170,170,1) 51%, rgba(189,182,214,1) 100%); border-radius:20px; padding:10px; font-family:monospace;">
+    <div style="border-radius:20px; padding:10px; font-family:monospace;">
       <div>
         <h2>Hi ${connector},</h2>
         <p>Here are your matches for this week:</p>
@@ -550,7 +542,7 @@ const createMessage = (connector, emailData) => {
     message += `<h3>Matches for ${curAlias}:</h3><div>`
     for (let j = 0; j < curAliasMatches.length; j++) {
       message += (`
-        <div style="margin:10px">-->  ${curAliasMatches[j].alias}, aged ${curAliasMatches[j].age}, located in ${curAliasMatches[j].location}. Reach out to ${curAliasMatches[j].connectorName} for more details: ${curAliasMatches[j].connectorNumber}.</div>
+        <div style="margin:10px">-->  <strong>${curAliasMatches[j].alias}</strong>, aged ${curAliasMatches[j].age}, located in ${curAliasMatches[j].location}. Reach out to <strong>${curAliasMatches[j].connectorName}</strong> for more details: <strong>${curAliasMatches[j].connectorNumber}</strong>.</div>
       `)
     }
     message += '</div>'
@@ -559,28 +551,49 @@ const createMessage = (connector, emailData) => {
   return message;
 }
 
-const sendMail = process.argv[3];
-if (sendMail === "send") {
-  sendEmail(process.env.EMAIL_RECIPIENT, createMessage())
-}
-
 // Run the Algorithm
-const mode = process.argv[2];
+const mode = process.argv[3];
 
 if (mode === 'run') {
   addMatches(new Date().toLocaleDateString(), prevMatches, 'MatchesTest.json', spreadSheet);
 }
-else if (mode === 'test') {
-  addMatches(new Date().toLocaleDateString(), prevMatches, 'MatchesTest.json', spreadSheet); 
-} 
 else if (mode === 'success') {
   const path = './MatchesTest.json';
   fs.exists(path, isExist => {
     if (isExist) {
       console.log("exists:", path);
       fs.rename(path, './Matches.json', function (err) {
-        if (err) throw err;
-        console.log('File Renamed.');
+        if (err) {
+          console.log(err)
+        }
+        else {
+          console.log('File Renamed.');
+
+          fs.readFile('./girlMatches.json', (err, data) => {
+            if (err) {
+              console.log(err)
+            }
+            else {
+              let girlMatches = JSON.parse(data);
+              dataForEmail(girlMatches, spreadSheet).then(emailData => {
+                const connectors = Object.keys(emailData);
+                console.log(emailData)
+                for (let i = 0; i < connectors.length; i++) {
+                  const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+                  if (connectors[i] === 'Evan Harris') {
+                      sendEmail('michaellosev75@gmail.com', message)
+                  }
+                }
+              })
+            }
+          })
+
+          fs.unlink('./girlMatches.json', (err) => {
+            if (err) {
+              console.error(err)
+            }
+          })
+        }
       });
     } else {
       console.log("DOES NOT exist:", path);
@@ -589,5 +602,4 @@ else if (mode === 'success') {
 }
 else {
   console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
-  dataForEmail()
 }
