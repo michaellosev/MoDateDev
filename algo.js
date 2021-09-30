@@ -513,7 +513,7 @@ const sendEmail = (recipient, message) => {
   const mailOptions = {
     from: "test@gmail.com",
     to: recipient,
-    subject: "Nodemailer API",
+    subject: `MoDate Matches for week ${new Date().toLocaleDateString()} - Do Not Respond`,
     html: message
   };
 
@@ -580,9 +580,8 @@ else if (mode === 'success') {
                 console.log(emailData)
                 for (let i = 0; i < connectors.length; i++) {
                   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-                  if (connectors[i] === 'Evan Harris') {
-                      sendEmail('michaellosev75@gmail.com', message)
-                  }
+                  setTimeout(() => {sendEmail('michaellosev75@gmail.com', message)}, 1000 * i)
+                  // sendEmail('michaellosev75@gmail.com', message);
                 }
               })
             }
@@ -601,5 +600,5 @@ else if (mode === 'success') {
   })
 }
 else {
-  console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
+  console.error("Incorrect number of arguments. Try running `$ node algo dev/test run` or `$ node algo dev/test success`");
 }
