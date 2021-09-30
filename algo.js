@@ -2,13 +2,19 @@ import * as fs from 'fs';
 import * as data from './spreadsheet.js';
 import dotenv from 'dotenv';
 dotenv.config();
-import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConstants.js";
 import mailer from "./mailer.js";
 import transporter from "./mailer.js";
-const DOC = await data.getDoc();
-await DOC.loadInfo();
+import { readFile } from 'fs/promises';
 
+const prevMatches = JSON.parse(
+  await readFile(
+    new URL('./Matches.json', import.meta.url)
+  )
+);
+
+const spreadSheet = await data.getDocument();
+await spreadSheet.loadInfo()
 
 const filterBasedOnSex = (match, people) => {
   return people.filter(person => person.sex !== match.sex)
@@ -137,7 +143,7 @@ const checkMyersBriggs = (match, suitor, legend, myersBriggs, ranking) => {
   }
 }
 
-async function main(prevDocs) {
+async function generateMatches(prevMatches) {
   let people = await data.getData();
   people = people.filter(person => person.inactive == 'FALSE');
   const numPeople = people.length;
@@ -241,15 +247,13 @@ async function main(prevDocs) {
       i++;
     }
   }
-  
-  const prevMatches = await filterPrevMatches(prevDocs)
 
   const numMatches = {}
   const girlMatches = {};
   for (const name of Object.keys(preMatches)) {
     for (const match of preMatches[name]) {
       if (prelimMatches[match] && prelimMatches[match].includes(name)) {
-        if (!prevMatches[name] || !prevMatches[name].includes(match)) {
+        if (!prevMatches[name] || !prevMatches[name].hasOwnProperty(match)) {
           if (!numMatches[name] && !numMatches[match]) {
             if (girlMatches.hasOwnProperty(name)) {
               girlMatches[name].push(match);
@@ -303,33 +307,11 @@ async function main(prevDocs) {
   return girlMatches;
 }
 
-async function filterPrevMatches(prevDocs) {
-  const doc = await data.getDoc();
-  await doc.loadInfo();
-  const result = {}
-  for (let i = 0; i < prevDocs.length; i++) {
-    const sheet = doc.sheetsByTitle[prevDocs[i]]
-    const rows = await sheet.getRows();
-    rows.forEach(row => {
-      const arr = row['_rawData'];
-      const girlAlias = arr[4];
-      const guyAlias = arr[5];
-      if (result.hasOwnProperty(girlAlias)) {
-        result[girlAlias].push(guyAlias);
-      }
-      else {
-        result[girlAlias] = [guyAlias];
-      }
-    })
-  }
-  return result;
-}
-
-const getConnectors = async (title, doc) => {
-  const sheet = doc.sheetsByTitle[title]
+const getConnectors = async (title, document) => {
+  const sheet = document.sheetsByTitle[title]
   const rows = await sheet.getRows();
   rows.shift();
-  const connectors = doc.sheetsByTitle['Connector Directory'];
+  const connectors = document.sheetsByTitle['Connector Directory'];
   const cRows = await connectors.getRows();
   const dict = {};
   cRows.forEach(row => {
@@ -366,102 +348,21 @@ const rankAtrributes = async () => {
   })
 }
 
-const addMatches = async (title, prevDocs) => {
+const addMatches = async (title, prevMatches, fileName, document) => {
 
-  const doc = await data.getDoc();
-  await doc.loadInfo();
-
-  if (doc.sheetsByTitle[title] !== undefined) {
-    await doc.sheetsByTitle[title].delete()
+  if (document.sheetsByTitle[title] !== undefined) {
+    await document.sheetsByTitle[title].delete()
   }
 
-  const sheet = await doc.addSheet(
+  const sheet = await document.addSheet(
     { 
       title: title,
       headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
     }
   );
 
-  const girlMatches = await main(prevDocs);
-  const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('Form Responses 1', DOC);
-  const newRows = []
-  for (let key of keys) {
-    const guyMatches = girlMatches[key]
-    for (let guy of guyMatches) {
-      newRows.push(
-        {
-          ConnectorForGirl: directory[key][0],
-          'Girls Phone Number': directory[key][1],
-          ConnectorForGuy: directory[guy][0],
-          'Guys Phone Number': directory[guy][1],
-          girlAlias: key,
-          guyAlias: guy
-        }
-      )
-    }
-  }
-  await sheet.addRows(newRows)
-
-}
-
-const allMatches = async () => {
-  const doc = await data.getDoc();
-  await doc.loadInfo();
-  let re = /Matches/;
-  const spreadSheetTitles = Object.keys(doc.sheetsByTitle);
-  let arrMatches = [];
-  spreadSheetTitles.forEach(title => {
-    if (re.test(title)) {
-      arrMatches.push(title);
-    }
-  })
-  const listOfMatches = {};
-  for (let i = 0; i < arrMatches.length; i++) {
-    const curSheet = doc.sheetsByTitle[arrMatches[i]];
-    const rows = await curSheet.getRows();
-    rows.forEach(row => {
-      const girlAlias = row['_rawData'][4];
-      const guyAlias = row['_rawData'][5];
-      if (!listOfMatches.hasOwnProperty(girlAlias)) {
-        listOfMatches[girlAlias] = {[guyAlias]: 1};
-      }
-      else {
-        listOfMatches[girlAlias][guyAlias] = 1;
-      }
-      if (!listOfMatches.hasOwnProperty(guyAlias)) {
-        listOfMatches[guyAlias] = {[girlAlias]: 1};
-      }
-      else {
-        listOfMatches[guyAlias][girlAlias] = 1;
-      }
-    })
-  }
-  fs.writeFile('Matches.json', JSON.stringify(listOfMatches, null, 2), (err) => {
-    if (err) throw err;
-  })
-}
-
-const test = async (title, prevDocs) => {
-  const doc = new GoogleSpreadsheet('1tA4MzdMn17AJ5psxKxenL9ixFZq1KdfOYldx06qMBro');
-  await doc.useServiceAccountAuth({
-    client_email: process.env.CLIENT_EMAIL,
-    private_key: process.env.PRIVATE_KEY
-  })
-  await doc.loadInfo();
-  if (doc.sheetsByTitle[title] !== undefined) {
-    await doc.sheetsByTitle[title].delete()
-  }
-
-  const sheet = await doc.addSheet(
-    { 
-      title: title,
-      headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
-    }
-  );
-
-  const girlMatches = await main(prevDocs);
-  const emailData = await dataForEmail(girlMatches);
+  const girlMatches = await generateMatches(prevMatches);
+  const emailData = await dataForEmail(girlMatches, document);
   const connectors = Object.keys(emailData);
   console.log(emailData)
   for (let i = 0; i < connectors.length; i++) {
@@ -473,11 +374,23 @@ const test = async (title, prevDocs) => {
     }
   }
   const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('Form Responses 1', DOC);
+  const directory = await getConnectors('Form Responses 1', document);
   const newRows = []
   for (let key of keys) {
     const guyMatches = girlMatches[key]
     for (let guy of guyMatches) {
+      if (!prevMatches.hasOwnProperty(key)) {
+        prevMatches[key] = {[guy]: 1};
+      }
+      else {
+        prevMatches[key][guy] = 1;
+      }
+      if (!prevMatches.hasOwnProperty(guy)) {
+        prevMatches[guy] = {[key]: 1};
+      }
+      else {
+        prevMatches[guy][key] = 1;
+      }
       newRows.push(
         {
           ConnectorForGirl: directory[key][0],
@@ -491,16 +404,19 @@ const test = async (title, prevDocs) => {
     }
   }
   await sheet.addRows(newRows)
+  fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
+  })
 }
 
-const dataForEmail = async (results) => {
+const dataForEmail = async (results, document) => {
   const people = await data.getData();
   const peopleDirecotry = people.reduce((acc, cur) => {
     acc[cur.alias] = cur;
     return acc;
   }, {});
   const connectorResult = {};
-  const connectorDirectory = await getConnectors('Form Responses 1', DOC);
+  const connectorDirectory = await getConnectors('Form Responses 1', document);
   const keys = Object.keys(results);
   for (let i = 0; i < keys.length; i++) {
     const girlMatch = keys[i];
@@ -650,12 +566,28 @@ if (sendMail === "send") {
 
 // Run the Algorithm
 const mode = process.argv[2];
+
 if (mode === 'run') {
-  addMatches('Matches (Sep 19th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)', 'Matches (Sep 12th)'])
+  addMatches(new Date().toLocaleDateString(), prevMatches, 'MatchesTest.json', spreadSheet);
 }
 else if (mode === 'test') {
-  test('Matches (Sep 20th)', ['Matches (May 2nd)', 'Matches (May 15th)', 'Matches (June 2nd)', 'Matches (June 13th)', 'Matches (June 20th)', 'Matches (June 27th)', 'Matches (July 6th)', 'Matches (July 11th)', 'Matches (July 19th)', 'Matches (July 25th)', 'Matches (Aug 1st)', 'Matches (Aug 8th)', 'Matches (Aug 15th)', 'Matches (Aug 22nd)', 'Matches (Aug 30th)', 'Matches (Sep 5th)'])
-} else {
+  addMatches(new Date().toLocaleDateString(), prevMatches, 'MatchesTest.json', spreadSheet); 
+} 
+else if (mode === 'success') {
+  const path = './MatchesTest.json';
+  fs.exists(path, isExist => {
+    if (isExist) {
+      console.log("exists:", path);
+      fs.rename(path, './Matches.json', function (err) {
+        if (err) throw err;
+        console.log('File Renamed.');
+      });
+    } else {
+      console.log("DOES NOT exist:", path);
+    }
+  })
+}
+else {
   console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
   dataForEmail()
 }
