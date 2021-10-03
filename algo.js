@@ -414,7 +414,7 @@ const dataForEmail = async (results, document) => {
     const girlMatch = keys[i];
     results[girlMatch].forEach(guyMatch => {
       // add to the girls connectors email list
-      const girlsConnector = peopleDirecotry[girlMatch].connectorName;
+      const girlsConnector = peopleDirecotry[girlMatch].connectorName.trim().toLowerCase();
       if (connectorResult.hasOwnProperty(girlsConnector)) {
         if (connectorResult[girlsConnector]['matches'].hasOwnProperty(girlMatch)) {
           connectorResult[girlsConnector]['matches'][girlMatch].push(
@@ -456,7 +456,7 @@ const dataForEmail = async (results, document) => {
         connectorResult[girlsConnector]['email'] = connectorDirectory[girlMatch][2];
       }
       // add to the guys connectors email list
-      const guysConnector = peopleDirecotry[guyMatch].connectorName;
+      const guysConnector = peopleDirecotry[guyMatch].connectorName.trim().toLowerCase();
       if (connectorResult.hasOwnProperty(guysConnector)) {
         if (connectorResult[guysConnector]['matches'].hasOwnProperty(guyMatch)) {
           connectorResult[guysConnector]['matches'][guyMatch].push(
@@ -577,11 +577,10 @@ else if (mode === 'success') {
               let girlMatches = JSON.parse(data);
               dataForEmail(girlMatches, spreadSheet).then(emailData => {
                 const connectors = Object.keys(emailData);
-                console.log(emailData)
+                console.log(connectors.length)
                 for (let i = 0; i < connectors.length; i++) {
                   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
                   setTimeout(() => {sendEmail('michaellosev75@gmail.com', message)}, 1000 * i)
-                  // sendEmail('michaellosev75@gmail.com', message);
                 }
               })
             }

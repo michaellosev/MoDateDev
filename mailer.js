@@ -12,6 +12,7 @@ const transporter = nodemailer.createTransport({
         clientSecret: process.env.OAUTH_CLIENT_SECRET,
         refreshToken: process.env.OAUTH_REFRESH_TOKEN,
     },
+    pool: true
 });
 
 export default transporter;
