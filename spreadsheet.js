@@ -42,7 +42,7 @@ const accessSpreadsheet = (apiKey) => {
     })
 
     await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['Form Responses 1'];
+    const sheet = doc.sheetsByTitle['MoDate Responses'];
     const rows = await sheet.getRows();
     rows.shift();
     return rows.map(row => { 

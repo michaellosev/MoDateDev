@@ -316,7 +316,7 @@ const getConnectors = async (title, document) => {
   const dict = {};
   cRows.forEach(row => {
     const arr = row['_rawData'];
-    dict[arr[1].trim().toLowerCase()] = [arr[2], arr[4]];
+    dict[arr[1].trim().toLowerCase()] = [arr[2], arr[3]];
   })
   const directory = {}
   rows.forEach(row => {
@@ -329,7 +329,7 @@ const getConnectors = async (title, document) => {
 const rankAtrributes = async () => {
   const doc = await data.getDoc();
   await doc.loadInfo(); 
-  const sheet = doc.sheetsByTitle['Form Responses 1'];
+  const sheet = doc.sheetsByTitle['MoDate Responses'];
   const rows = await sheet.getRows();
   const result = {};
   rows.map(row => {
@@ -363,7 +363,7 @@ const addMatches = async (title, prevMatches, fileName, document) => {
 
   const girlMatches = await generateMatches(prevMatches);
   const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('Form Responses 1', document);
+  const directory = await getConnectors('MoDate Responses', document);
   const newRows = []
   for (let key of keys) {
     const guyMatches = girlMatches[key]
@@ -408,7 +408,8 @@ const dataForEmail = async (results, document) => {
     return acc;
   }, {});
   const connectorResult = {};
-  const connectorDirectory = await getConnectors('Form Responses 1', document);
+  const connectorDirectory = await getConnectors('MoDate Responses', document);
+  console.log(connectorDirectory)
   const keys = Object.keys(results);
   for (let i = 0; i < keys.length; i++) {
     const girlMatch = keys[i];
@@ -504,7 +505,7 @@ const dataForEmail = async (results, document) => {
 
 // send mail to connectors
 
-const sendEmail = (recipient, message) => {
+const sendEmail = (recipient, message, index) => {
   transporter.verify((err, success) => {
     err
         ? console.log(err)
@@ -521,7 +522,8 @@ const sendEmail = (recipient, message) => {
     if (err) {
       console.log("Error " + err);
     } else {
-      console.log(`Email sent successfully to ${recipient}`);
+      console.log(`Email sent successfully to ${recipient} # ${index}`);
+      console.log(data)
     }
   });
 }
@@ -531,7 +533,7 @@ const createMessage = (connector, emailData) => {
   let message = (`
     <div style="border-radius:20px; padding:10px; font-family:monospace;">
       <div>
-        <h2>Hi ${connector},</h2>
+        <h2>Hi ${connector.toUpperCase()},</h2>
         <p>Here are your matches for this week:</p>
       </div>
   `)
@@ -547,7 +549,7 @@ const createMessage = (connector, emailData) => {
     }
     message += '</div>'
   }
-  message += `<p>We appreciate your hard work, etc.</p><p>- MoDate</p></div>`;
+  message += `<p>We appreciate your hard work, pump the volume!.</p><p>- MoDate</p></div>`;
   return message;
 }
 
@@ -578,9 +580,10 @@ else if (mode === 'success') {
               dataForEmail(girlMatches, spreadSheet).then(emailData => {
                 const connectors = Object.keys(emailData);
                 console.log(connectors.length)
+                // console.log(emailData)
                 for (let i = 0; i < connectors.length; i++) {
                   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-                  setTimeout(() => {sendEmail('michaellosev75@gmail.com', message)}, 1000 * i)
+                  setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * i)
                 }
               })
             }
