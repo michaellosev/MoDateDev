@@ -311,16 +311,17 @@ const getConnectors = async (title, document) => {
   const sheet = document.sheetsByTitle[title]
   const rows = await sheet.getRows();
   rows.shift();
-  const connectors = document.sheetsByTitle['Connector Directory'];
+  const connectors = document.sheetsByTitle['Connector Responses'];
   const cRows = await connectors.getRows();
   const dict = {};
   cRows.forEach(row => {
     const arr = row['_rawData'];
-    dict[arr[1].trim().toLowerCase()] = [arr[2], arr[3]];
+    dict[arr[1].trim().toLowerCase()] = [arr[3], arr[4]];
   })
   const directory = {}
   rows.forEach(row => {
     const arr = row['_rawData'];
+    console.log(arr)
     directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()][0], dict[arr[3].trim().toLowerCase()][1]];
   })
   return directory;
