@@ -585,6 +585,7 @@ else if (mode === 'success') {
                 for (let i = 0; i < connectors.length; i++) {
                   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
                   setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * i)
+                  // emailData[connectors[i]].email
                 }
               })
             }
