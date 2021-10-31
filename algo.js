@@ -61,6 +61,19 @@ const filterBasedOnReligion = (match, people) => {
   })
 }
 
+const filterOnLocation = (match, people) => {
+  return people.filter(person => {
+    const matchDatingLocations = match.willingToDate.split(', ');
+    const personDatingLocations = person.willingToDate.split(', ');
+    const isCompatibleLocations = matchDatingLocations.reduce((acc, cur) => {
+      return acc || personDatingLocations.includes(cur);
+    }, false);
+    // if (match.alias === 'MEFM002' && person.alias === 'ZFSF130')
+    // console.log(isCompatibleLocations)
+    return isCompatibleLocations;
+  })
+}
+
 const getMyersBriggs = (match) => {
 
   const Letters = [["E", "I"], ["S", "N"], ["T", "F"], ["J", "P"]]
@@ -154,7 +167,8 @@ async function generateMatches(prevMatches) {
   const results = {}
   for (let i = 0; i < numPeople; i++) {
     const suitors = filterBasedOnSex(people[i], people);
-    const religiousMatchingFemales = filterBasedOnReligion(people[i], suitors)
+    const compatibleLocation = filterOnLocation(people[i], suitors);
+    const religiousMatchingFemales = filterBasedOnReligion(people[i], compatibleLocation)
     const match = people[i];
     const resultingRankings = religiousMatchingFemales.map(person => {
       let score = Object.keys(match.characteristicsP).reduce((acc, key) => {
@@ -321,7 +335,7 @@ const getConnectors = async (title, document) => {
   const directory = {}
   rows.forEach(row => {
     const arr = row['_rawData'];
-    console.log(arr)
+    // console.log(arr)
     directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()][0], dict[arr[3].trim().toLowerCase()][1]];
   })
   return directory;
@@ -582,9 +596,10 @@ else if (mode === 'success') {
                 const connectors = Object.keys(emailData);
                 console.log(connectors.length)
                 // console.log(emailData)
-                for (let i = 0; i < connectors.length; i++) {
+                for (let i = 71; i < connectors.length; i++) {
                   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-                  setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * i)
+                  console.log(connectors[i])
+                  setTimeout(() => {sendEmail( emailData[connectors[i]].email, message, i)}, 1000 * j)
                   // emailData[connectors[i]].email
                 }
               })
@@ -605,4 +620,5 @@ else if (mode === 'success') {
 }
 else {
   console.error("Incorrect number of arguments. Try running `$ node algo dev/test run` or `$ node algo dev/test success`");
+  sendEmail('michaellosev75@gmail.com', 'hello', 1)
 }

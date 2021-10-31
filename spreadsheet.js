@@ -86,7 +86,10 @@ const accessSpreadsheet = (apiKey) => {
         religiousAddData: data[25],
         generalAddData: data[26],
         minAge: +data[29],
-        maxAge: +data[30]
+        maxAge: +data[30],
+        willingToDate: data[31],
+        height: data[32],
+        minHeight: data[33]
       }
     })
   }
