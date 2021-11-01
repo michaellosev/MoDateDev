@@ -4,7 +4,7 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 
 let apiKey = null;
 
-if (process.argv[2] === 'run') {
+if (process.argv[2] === 'dev') {
   apiKey = process.env.DEV_KEY;
 }
 else if (process.argv[2] === 'test') {
@@ -42,7 +42,7 @@ const accessSpreadsheet = (apiKey) => {
     })
 
     await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['Form Responses 1'];
+    const sheet = doc.sheetsByTitle['MoDate Responses'];
     const rows = await sheet.getRows();
     rows.shift();
     return rows.map(row => { 
@@ -86,7 +86,10 @@ const accessSpreadsheet = (apiKey) => {
         religiousAddData: data[25],
         generalAddData: data[26],
         minAge: +data[29],
-        maxAge: +data[30]
+        maxAge: +data[30],
+        willingToDate: data[31],
+        height: data[32],
+        minHeight: data[33]
       }
     })
   }

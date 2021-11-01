@@ -61,6 +61,19 @@ const filterBasedOnReligion = (match, people) => {
   })
 }
 
+const filterOnLocation = (match, people) => {
+  return people.filter(person => {
+    const matchDatingLocations = match.willingToDate.split(', ');
+    const personDatingLocations = person.willingToDate.split(', ');
+    const isCompatibleLocations = matchDatingLocations.reduce((acc, cur) => {
+      return acc || personDatingLocations.includes(cur);
+    }, false);
+    // if (match.alias === 'MEFM002' && person.alias === 'ZFSF130')
+    // console.log(isCompatibleLocations)
+    return isCompatibleLocations;
+  })
+}
+
 const getMyersBriggs = (match) => {
 
   const Letters = [["E", "I"], ["S", "N"], ["T", "F"], ["J", "P"]]
@@ -154,7 +167,8 @@ async function generateMatches(prevMatches) {
   const results = {}
   for (let i = 0; i < numPeople; i++) {
     const suitors = filterBasedOnSex(people[i], people);
-    const religiousMatchingFemales = filterBasedOnReligion(people[i], suitors)
+    const compatibleLocation = filterOnLocation(people[i], suitors);
+    const religiousMatchingFemales = filterBasedOnReligion(people[i], compatibleLocation)
     const match = people[i];
     const resultingRankings = religiousMatchingFemales.map(person => {
       let score = Object.keys(match.characteristicsP).reduce((acc, key) => {
@@ -311,17 +325,18 @@ const getConnectors = async (title, document) => {
   const sheet = document.sheetsByTitle[title]
   const rows = await sheet.getRows();
   rows.shift();
-  const connectors = document.sheetsByTitle['Connector Directory'];
+  const connectors = document.sheetsByTitle['Connector Responses'];
   const cRows = await connectors.getRows();
   const dict = {};
   cRows.forEach(row => {
     const arr = row['_rawData'];
-    dict[arr[1].trim().toLowerCase()] = arr[2];
+    dict[arr[1].trim().toLowerCase()] = [arr[3], arr[4]];
   })
   const directory = {}
   rows.forEach(row => {
     const arr = row['_rawData'];
-    directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()]];
+    // console.log(arr)
+    directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()][0], dict[arr[3].trim().toLowerCase()][1]];
   })
   return directory;
 }
@@ -329,7 +344,7 @@ const getConnectors = async (title, document) => {
 const rankAtrributes = async () => {
   const doc = await data.getDoc();
   await doc.loadInfo(); 
-  const sheet = doc.sheetsByTitle['Form Responses 1'];
+  const sheet = doc.sheetsByTitle['MoDate Responses'];
   const rows = await sheet.getRows();
   const result = {};
   rows.map(row => {
@@ -363,7 +378,7 @@ const addMatches = async (title, prevMatches, fileName, document) => {
 
   const girlMatches = await generateMatches(prevMatches);
   const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('Form Responses 1', document);
+  const directory = await getConnectors('MoDate Responses', document);
   const newRows = []
   for (let key of keys) {
     const guyMatches = girlMatches[key]
@@ -393,15 +408,119 @@ const addMatches = async (title, prevMatches, fileName, document) => {
     }
   }
   await sheet.addRows(newRows)
+  fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
+  })
   fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
     if (err) throw err;
   })
 }
 
+const dataForEmail = async (results, document) => {
+  const people = await data.getData();
+  const peopleDirecotry = people.reduce((acc, cur) => {
+    acc[cur.alias] = cur;
+    return acc;
+  }, {});
+  const connectorResult = {};
+  const connectorDirectory = await getConnectors('MoDate Responses', document);
+  console.log(connectorDirectory)
+  const keys = Object.keys(results);
+  for (let i = 0; i < keys.length; i++) {
+    const girlMatch = keys[i];
+    results[girlMatch].forEach(guyMatch => {
+      // add to the girls connectors email list
+      const girlsConnector = peopleDirecotry[girlMatch].connectorName.trim().toLowerCase();
+      if (connectorResult.hasOwnProperty(girlsConnector)) {
+        if (connectorResult[girlsConnector]['matches'].hasOwnProperty(girlMatch)) {
+          connectorResult[girlsConnector]['matches'][girlMatch].push(
+            {
+              alias: guyMatch,
+              age: peopleDirecotry[guyMatch].age,
+              location: peopleDirecotry[guyMatch].location,
+              connectorName: connectorDirectory[guyMatch][0],
+              connectorNumber: connectorDirectory[guyMatch][1]
+            }
+          )
+        }
+        else {
+          connectorResult[girlsConnector]['matches'][girlMatch] = [
+            {
+              alias: guyMatch,
+              age: peopleDirecotry[guyMatch].age,
+              location: peopleDirecotry[guyMatch].location,
+              connectorName: connectorDirectory[guyMatch][0],
+              connectorNumber: connectorDirectory[guyMatch][1]
+            }
+          ]
+        }
+      }
+      else {
+        connectorResult[girlsConnector] = {
+          matches: {
+            [girlMatch]: [
+              {
+                alias: guyMatch,
+                age: peopleDirecotry[guyMatch].age,
+                location: peopleDirecotry[guyMatch].location,
+                connectorName: connectorDirectory[guyMatch][0],
+                connectorNumber: connectorDirectory[guyMatch][1]
+              }
+            ]
+          }
+        }
+        connectorResult[girlsConnector]['email'] = connectorDirectory[girlMatch][2];
+      }
+      // add to the guys connectors email list
+      const guysConnector = peopleDirecotry[guyMatch].connectorName.trim().toLowerCase();
+      if (connectorResult.hasOwnProperty(guysConnector)) {
+        if (connectorResult[guysConnector]['matches'].hasOwnProperty(guyMatch)) {
+          connectorResult[guysConnector]['matches'][guyMatch].push(
+            {
+              alias: girlMatch,
+              age: peopleDirecotry[girlMatch].age,
+              location: peopleDirecotry[girlMatch].location,
+              connectorName: connectorDirectory[girlMatch][0],
+              connectorNumber: connectorDirectory[girlMatch][1]
+            }
+          )
+        }
+        else {
+          connectorResult[guysConnector]['matches'][guyMatch] = [
+            {
+              alias: girlMatch,
+              age: peopleDirecotry[girlMatch].age,
+              location: peopleDirecotry[girlMatch].location,
+              connectorName: connectorDirectory[girlMatch][0],
+              connectorNumber: connectorDirectory[girlMatch][1]
+            }
+          ]
+        }
+      }
+      else {
+        connectorResult[guysConnector] = {
+          matches: {
+            [guyMatch]: [
+              {
+                alias: girlMatch,
+                age: peopleDirecotry[girlMatch].age,
+                location: peopleDirecotry[girlMatch].location,
+                connectorName: connectorDirectory[girlMatch][0],
+                connectorNumber: connectorDirectory[girlMatch][1]
+              }
+            ]
+          }
+        }
+        connectorResult[guysConnector]['email'] = connectorDirectory[guyMatch][2];
+      }
+    })
+  }
+  return connectorResult;
+}
 
 // send mail to connectors
-const sendMail = process.argv[3];
-if (sendMail === "send") {
+
+const sendEmail = (recipient, message, index) => {
   transporter.verify((err, success) => {
     err
         ? console.log(err)
@@ -409,37 +528,90 @@ if (sendMail === "send") {
   });
   const mailOptions = {
     from: "test@gmail.com",
-    to: process.env.EMAIL,
-    subject: "Nodemailer API",
-    text: "Hi from your nodemailer API",
+    to: recipient,
+    subject: `MoDate Matches for week ${new Date().toLocaleDateString()} - Do Not Respond`,
+    html: message
   };
 
   mailer.sendMail(mailOptions, function (err, data) {
     if (err) {
       console.log("Error " + err);
     } else {
-      console.log("Email sent successfully");
+      console.log(`Email sent successfully to ${recipient} # ${index}`);
+      console.log(data)
     }
   });
 }
 
+const createMessage = (connector, emailData) => {
+
+  let message = (`
+    <div style="border-radius:20px; padding:10px; font-family:monospace;">
+      <div>
+        <h2>Hi ${connector.toUpperCase()},</h2>
+        <p>Here are your matches for this week:</p>
+      </div>
+  `)
+  const matches = Object.keys(emailData);
+  for (let i = 0; i < matches.length; i++) {
+    const curAlias = matches[i];
+    const curAliasMatches = emailData[curAlias];
+    message += `<h3>Matches for ${curAlias}:</h3><div>`
+    for (let j = 0; j < curAliasMatches.length; j++) {
+      message += (`
+        <div style="margin:10px">-->  <strong>${curAliasMatches[j].alias}</strong>, aged ${curAliasMatches[j].age}, located in ${curAliasMatches[j].location}. Reach out to <strong>${curAliasMatches[j].connectorName}</strong> for more details: <strong>${curAliasMatches[j].connectorNumber}</strong>.</div>
+      `)
+    }
+    message += '</div>'
+  }
+  message += `<p>We appreciate your hard work, pump the volume!.</p><p>- MoDate</p></div>`;
+  return message;
+}
+
 // Run the Algorithm
-const mode = process.argv[2];
+const mode = process.argv[3];
 
 if (mode === 'run') {
   addMatches(new Date().toLocaleDateString(), prevMatches, 'MatchesTest.json', spreadSheet);
 }
-else if (mode === 'test') {
-  addMatches(new Date().toLocaleDateString(), prevMatches, 'MatchesTest.json', spreadSheet); 
-} 
 else if (mode === 'success') {
   const path = './MatchesTest.json';
   fs.exists(path, isExist => {
     if (isExist) {
       console.log("exists:", path);
       fs.rename(path, './Matches.json', function (err) {
-        if (err) throw err;
-        console.log('File Renamed.');
+        if (err) {
+          console.log(err)
+        }
+        else {
+          console.log('File Renamed.');
+
+          fs.readFile('./girlMatches.json', (err, data) => {
+            if (err) {
+              console.log(err)
+            }
+            else {
+              let girlMatches = JSON.parse(data);
+              dataForEmail(girlMatches, spreadSheet).then(emailData => {
+                const connectors = Object.keys(emailData);
+                console.log(connectors.length)
+                // console.log(emailData)
+                for (let i = 71; i < connectors.length; i++) {
+                  const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+                  console.log(connectors[i])
+                  setTimeout(() => {sendEmail( emailData[connectors[i]].email, message, i)}, 1000 * j)
+                  // emailData[connectors[i]].email
+                }
+              })
+            }
+          })
+
+          fs.unlink('./girlMatches.json', (err) => {
+            if (err) {
+              console.error(err)
+            }
+          })
+        }
       });
     } else {
       console.log("DOES NOT exist:", path);
@@ -447,5 +619,6 @@ else if (mode === 'success') {
   })
 }
 else {
-  console.error("Incorrect number of arguments. Try running `$ node algo run` or `$ node algo test`");
+  console.error("Incorrect number of arguments. Try running `$ node algo dev/test run` or `$ node algo dev/test success`");
+  sendEmail('michaellosev75@gmail.com', 'hello', 1)
 }
