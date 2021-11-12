@@ -68,9 +68,24 @@ const filterOnLocation = (match, people) => {
     const isCompatibleLocations = matchDatingLocations.reduce((acc, cur) => {
       return acc || personDatingLocations.includes(cur);
     }, false);
-    // if (match.alias === 'MEFM002' && person.alias === 'ZFSF130')
-    // console.log(isCompatibleLocations)
     return isCompatibleLocations;
+  })
+}
+
+const filterOnHeight = (match, people) => {
+  return people.filter(person => {
+    // console.log(match.height, match.minHeight);
+    // console.log(person.height, person.minHeight);
+    if (match.height === undefined || person.height === undefined) {
+      return true;
+    }
+    const matchHeight = (match.height != "Under 5'0" && match.height != "6'5 & Up") ? +match.height.split("'")[0] * 12 + +match.height.split("'")[1] : (match.height === "Under 5'0" ? 59 : 78);
+    const matchMinHeight = match.minHeight === undefined ? 0 : (match.minHeight != "Under 5'0" && match.minHeight != "6'5 & Up") ? +match.minHeight.split("'")[0] * 12 + +match.minHeight.split("'")[1] : (match.minHeight === "Under 5'0" ? 59 : 78);
+    const personHeight = (person.height != "Under 5'0" && person.height != "6'5 & Up") ? +person.height.split("'")[0] * 12 + +person.height.split("'")[1] : (person.height === "Under 5'0" ? 59 : 78);
+    const personMinHeight = person.minHeight === undefined ? 0 : (person.minHeight != "Under 5'0" && person.minHeight != "6'5 & Up") ? +person.minHeight.split("'")[0] * 12 + +person.minHeight.split("'")[1] : (person.minHeight === "Under 5'0" ? 59 : 78);
+    const result = (matchHeight >= personMinHeight && personHeight >= matchMinHeight);
+    // console.log(result)
+    return result;
   })
 }
 
@@ -167,7 +182,8 @@ async function generateMatches(prevMatches) {
   const results = {}
   for (let i = 0; i < numPeople; i++) {
     const suitors = filterBasedOnSex(people[i], people);
-    const compatibleLocation = filterOnLocation(people[i], suitors);
+    const compatibleHeight = filterOnHeight(people[i], suitors)
+    const compatibleLocation = filterOnLocation(people[i], compatibleHeight);
     const religiousMatchingFemales = filterBasedOnReligion(people[i], compatibleLocation)
     const match = people[i];
     const resultingRankings = religiousMatchingFemales.map(person => {
@@ -233,7 +249,7 @@ async function generateMatches(prevMatches) {
     const compatiblePartners = male.compatiblePartners;
     let i = 0;
     while (i < compatiblePartners.length) {
-      if (compatiblePartners[i].compatabilityScore >= 4) {
+      if (compatiblePartners[i].compatabilityScore >= 5) {
         if (prelimMatches.hasOwnProperty(male.person)) {
           prelimMatches[male.person].push(compatiblePartners[i].name)
         }
@@ -250,7 +266,7 @@ async function generateMatches(prevMatches) {
     const compatiblePartners = female.compatiblePartners;
     let i = 0;
     while (i < compatiblePartners.length) {
-      if (compatiblePartners[i].compatabilityScore >= 4) {
+      if (compatiblePartners[i].compatabilityScore >= 5) {
         if (preMatches.hasOwnProperty(female.person)) {
           preMatches[female.person].push(compatiblePartners[i].name)
         }
@@ -365,55 +381,66 @@ const rankAtrributes = async () => {
 
 const addMatches = async (title, prevMatches, fileName, document) => {
 
-  if (document.sheetsByTitle[title] !== undefined) {
-    await document.sheetsByTitle[title].delete()
-  }
+  // if (document.sheetsByTitle[title] !== undefined) {
+  //   await document.sheetsByTitle[title].delete()
+  // }
 
-  const sheet = await document.addSheet(
-    { 
-      title: title,
-      headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
-    }
-  );
+  // const sheet = await document.addSheet(
+  //   { 
+  //     title: title,
+  //     headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
+  //   }
+  // );
 
   const girlMatches = await generateMatches(prevMatches);
-  const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('MoDate Responses', document);
-  const newRows = []
-  for (let key of keys) {
-    const guyMatches = girlMatches[key]
-    for (let guy of guyMatches) {
-      if (!prevMatches.hasOwnProperty(key)) {
-        prevMatches[key] = {[guy]: 1};
-      }
-      else {
-        prevMatches[key][guy] = 1;
-      }
-      if (!prevMatches.hasOwnProperty(guy)) {
-        prevMatches[guy] = {[key]: 1};
-      }
-      else {
-        prevMatches[guy][key] = 1;
-      }
-      newRows.push(
-        {
-          ConnectorForGirl: directory[key][0],
-          'Girls Phone Number': directory[key][1],
-          ConnectorForGuy: directory[guy][0],
-          'Guys Phone Number': directory[guy][1],
-          girlAlias: key,
-          guyAlias: guy
-        }
-      )
+  // const keys = Object.keys(girlMatches);
+  // const directory = await getConnectors('MoDate Responses', document);
+  // const newRows = []
+  // for (let key of keys) {
+  //   const guyMatches = girlMatches[key]
+  //   for (let guy of guyMatches) {
+  //     if (!prevMatches.hasOwnProperty(key)) {
+  //       prevMatches[key] = {[guy]: 1};
+  //     }
+  //     else {
+  //       prevMatches[key][guy] = 1;
+  //     }
+  //     if (!prevMatches.hasOwnProperty(guy)) {
+  //       prevMatches[guy] = {[key]: 1};
+  //     }
+  //     else {
+  //       prevMatches[guy][key] = 1;
+  //     }
+  //     newRows.push(
+  //       {
+  //         ConnectorForGirl: directory[key][0],
+  //         'Girls Phone Number': directory[key][1],
+  //         ConnectorForGuy: directory[guy][0],
+  //         'Guys Phone Number': directory[guy][1],
+  //         girlAlias: key,
+  //         guyAlias: guy
+  //       }
+  //     )
+  //   }
+  // }
+  dataForEmail(girlMatches, spreadSheet).then(emailData => {
+    const connectors = Object.keys(emailData);
+    console.log(connectors.length)
+    // console.log(emailData)
+    for (let i = 0; i < 1; i++) {
+      const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+      console.log(connectors[i])
+      setTimeout(() => {sendEmail('michaellosev75@gmail.com', message, i)}, 1000 * i)
+      // emailData[connectors[i]].email
     }
-  }
-  await sheet.addRows(newRows)
-  fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
-    if (err) throw err;
   })
-  fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
-    if (err) throw err;
-  })
+  // await sheet.addRows(newRows)
+  // fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
+  //   if (err) throw err;
+  // })
+  // fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
+  //   if (err) throw err;
+  // })
 }
 
 const dataForEmail = async (results, document) => {
@@ -424,7 +451,7 @@ const dataForEmail = async (results, document) => {
   }, {});
   const connectorResult = {};
   const connectorDirectory = await getConnectors('MoDate Responses', document);
-  console.log(connectorDirectory)
+  // console.log(connectorDirectory)
   const keys = Object.keys(results);
   for (let i = 0; i < keys.length; i++) {
     const girlMatch = keys[i];
@@ -543,28 +570,48 @@ const sendEmail = (recipient, message, index) => {
   });
 }
 
+function capitalizeFirstLetter(string) {
+  let result = '';
+  string.split(' ').forEach(str => {
+    result += str.charAt(0).toUpperCase() + str.slice(1);
+    result += ' ';
+  });
+  return result.trim();
+}
+
 const createMessage = (connector, emailData) => {
 
   let message = (`
-    <div style="border-radius:20px; padding:10px; font-family:monospace;">
+    <head>
+    <style>
+      @media only screen and (max-width: 479px) {
+        .main {
+          width: 95% !important;
+          margin: auto
+        }
+      }
+    </style>
+    <div class="main" style="margin: auto; width: 70%; padding:10px; font-family:monospace;">
       <div>
-        <h2>Hi ${connector.toUpperCase()},</h2>
-        <p>Here are your matches for this week:</p>
+        <div style="text-align:center; font-size:30px; font-weight:bold; background:#25253b; color:white; padding: 20px;">${capitalizeFirstLetter(connector)}'s Matches</div>
       </div>
   `)
   const matches = Object.keys(emailData);
   for (let i = 0; i < matches.length; i++) {
     const curAlias = matches[i];
     const curAliasMatches = emailData[curAlias];
-    message += `<h3>Matches for ${curAlias}:</h3><div>`
+    message += `<div style="text-align:center; font-size:20px; font-weight:bold; background:white; color:black; padding: 20px;">Matches for ${curAlias}:</div>
+    <div style="background: #25253b; color: white; padding: 15px;">`
     for (let j = 0; j < curAliasMatches.length; j++) {
       message += (`
-        <div style="margin:10px">-->  <strong>${curAliasMatches[j].alias}</strong>, aged ${curAliasMatches[j].age}, located in ${curAliasMatches[j].location}. Reach out to <strong>${curAliasMatches[j].connectorName}</strong> for more details: <strong>${curAliasMatches[j].connectorNumber}</strong>.</div>
+        <div style="margin:10px; text-align:center">-->  <strong>${curAliasMatches[j].alias}</strong>, aged ${curAliasMatches[j].age}, located in ${curAliasMatches[j].location}. Reach out to <strong>${curAliasMatches[j].connectorName}</strong> for more details: <a href="tel:${curAliasMatches[j].connectorNumber}"><strong>${curAliasMatches[j].connectorNumber}</strong></a>.</div>
       `)
     }
     message += '</div>'
   }
-  message += `<p>We appreciate your hard work, pump the volume!.</p><p>- MoDate</p></div>`;
+  message += `<a href="https://ibb.co/2sp3ZMz"><img style="width: 120px; height: 55px; margin-top: 20px;" src="https://i.ibb.co/Hx9ThPc/moDate.png" alt="moDate" border="0"></a>`
+  message += `<p>Follow us on Instagram <a href=https://www.instagram.com/modate613/>@modate613</a></p>`;
+  message += `<p>We appreciate your hard work, pump the volume!</div></head>`;
   return message;
 }
 
@@ -596,10 +643,10 @@ else if (mode === 'success') {
                 const connectors = Object.keys(emailData);
                 console.log(connectors.length)
                 // console.log(emailData)
-                for (let i = 71; i < connectors.length; i++) {
+                for (let i = 87; i < connectors.length; i++) {
                   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
                   console.log(connectors[i])
-                  setTimeout(() => {sendEmail( emailData[connectors[i]].email, message, i)}, 1000 * j)
+                  setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * i)
                   // emailData[connectors[i]].email
                 }
               })
