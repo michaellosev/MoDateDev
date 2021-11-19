@@ -381,66 +381,66 @@ const rankAtrributes = async () => {
 
 const addMatches = async (title, prevMatches, fileName, document) => {
 
-  // if (document.sheetsByTitle[title] !== undefined) {
-  //   await document.sheetsByTitle[title].delete()
-  // }
+  if (document.sheetsByTitle[title] !== undefined) {
+    await document.sheetsByTitle[title].delete()
+  }
 
-  // const sheet = await document.addSheet(
-  //   { 
-  //     title: title,
-  //     headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
-  //   }
-  // );
+  const sheet = await document.addSheet(
+    { 
+      title: title,
+      headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
+    }
+  );
 
   const girlMatches = await generateMatches(prevMatches);
-  // const keys = Object.keys(girlMatches);
-  // const directory = await getConnectors('MoDate Responses', document);
-  // const newRows = []
-  // for (let key of keys) {
-  //   const guyMatches = girlMatches[key]
-  //   for (let guy of guyMatches) {
-  //     if (!prevMatches.hasOwnProperty(key)) {
-  //       prevMatches[key] = {[guy]: 1};
-  //     }
-  //     else {
-  //       prevMatches[key][guy] = 1;
-  //     }
-  //     if (!prevMatches.hasOwnProperty(guy)) {
-  //       prevMatches[guy] = {[key]: 1};
-  //     }
-  //     else {
-  //       prevMatches[guy][key] = 1;
-  //     }
-  //     newRows.push(
-  //       {
-  //         ConnectorForGirl: directory[key][0],
-  //         'Girls Phone Number': directory[key][1],
-  //         ConnectorForGuy: directory[guy][0],
-  //         'Guys Phone Number': directory[guy][1],
-  //         girlAlias: key,
-  //         guyAlias: guy
-  //       }
-  //     )
-  //   }
-  // }
-  dataForEmail(girlMatches, spreadSheet).then(emailData => {
-    const connectors = Object.keys(emailData);
-    console.log(connectors.length)
-    // console.log(emailData)
-    for (let i = 0; i < 1; i++) {
-      const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-      console.log(connectors[i])
-      setTimeout(() => {sendEmail('michaellosev75@gmail.com', message, i)}, 1000 * i)
-      // emailData[connectors[i]].email
+  const keys = Object.keys(girlMatches);
+  const directory = await getConnectors('MoDate Responses', document);
+  const newRows = []
+  for (let key of keys) {
+    const guyMatches = girlMatches[key]
+    for (let guy of guyMatches) {
+      if (!prevMatches.hasOwnProperty(key)) {
+        prevMatches[key] = {[guy]: 1};
+      }
+      else {
+        prevMatches[key][guy] = 1;
+      }
+      if (!prevMatches.hasOwnProperty(guy)) {
+        prevMatches[guy] = {[key]: 1};
+      }
+      else {
+        prevMatches[guy][key] = 1;
+      }
+      newRows.push(
+        {
+          ConnectorForGirl: directory[key][0],
+          'Girls Phone Number': directory[key][1],
+          ConnectorForGuy: directory[guy][0],
+          'Guys Phone Number': directory[guy][1],
+          girlAlias: key,
+          guyAlias: guy
+        }
+      )
     }
+  }
+  // dataForEmail(girlMatches, spreadSheet).then(emailData => {
+  //   const connectors = Object.keys(emailData);
+  //   console.log(connectors.length)
+  //   // console.log(emailData)
+  //   for (let i = 0; i < 1; i++) {
+  //     const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+  //     console.log(connectors[i])
+  //     setTimeout(() => {sendEmail('michaellosev75@gmail.com', message, i)}, 1000 * i)
+  //     // emailData[connectors[i]].email
+  //   }
+  // })
+  await sheet.addRows(newRows)
+  fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
   })
-  // await sheet.addRows(newRows)
-  // fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
-  //   if (err) throw err;
-  // })
-  // fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
-  //   if (err) throw err;
-  // })
+  fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
+  })
 }
 
 const dataForEmail = async (results, document) => {
@@ -643,10 +643,12 @@ else if (mode === 'success') {
                 const connectors = Object.keys(emailData);
                 console.log(connectors.length)
                 // console.log(emailData)
-                for (let i = 87; i < connectors.length; i++) {
+                let k = 0;
+                for (let i = 96; i < connectors.length; i++) {
                   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
                   console.log(connectors[i])
-                  setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * i)
+                  setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * k)
+                  k++;
                   // emailData[connectors[i]].email
                 }
               })
