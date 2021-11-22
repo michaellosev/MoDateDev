@@ -74,17 +74,14 @@ const filterOnLocation = (match, people) => {
 
 const filterOnHeight = (match, people) => {
   return people.filter(person => {
-    // console.log(match.height, match.minHeight);
-    // console.log(person.height, person.minHeight);
-    if (match.height === undefined || person.height === undefined) {
+    if (match.height === '' || person.height === '') {
       return true;
     }
     const matchHeight = (match.height != "Under 5'0" && match.height != "6'5 & Up") ? +match.height.split("'")[0] * 12 + +match.height.split("'")[1] : (match.height === "Under 5'0" ? 59 : 78);
-    const matchMinHeight = match.minHeight === undefined ? 0 : (match.minHeight != "Under 5'0" && match.minHeight != "6'5 & Up") ? +match.minHeight.split("'")[0] * 12 + +match.minHeight.split("'")[1] : (match.minHeight === "Under 5'0" ? 59 : 78);
+    const matchMinHeight = match.minHeight == '' ? 0 : (match.minHeight != "Under 5'0" && match.minHeight != "6'5 & Up") ? +match.minHeight.split("'")[0] * 12 + +match.minHeight.split("'")[1] : (match.minHeight === "Under 5'0" ? 59 : 78);
     const personHeight = (person.height != "Under 5'0" && person.height != "6'5 & Up") ? +person.height.split("'")[0] * 12 + +person.height.split("'")[1] : (person.height === "Under 5'0" ? 59 : 78);
-    const personMinHeight = person.minHeight === undefined ? 0 : (person.minHeight != "Under 5'0" && person.minHeight != "6'5 & Up") ? +person.minHeight.split("'")[0] * 12 + +person.minHeight.split("'")[1] : (person.minHeight === "Under 5'0" ? 59 : 78);
+    const personMinHeight = person.minHeight == '' ? 0 : (person.minHeight != "Under 5'0" && person.minHeight != "6'5 & Up") ? +person.minHeight.split("'")[0] * 12 + +person.minHeight.split("'")[1] : (person.minHeight === "Under 5'0" ? 59 : 78);
     const result = (matchHeight >= personMinHeight && personHeight >= matchMinHeight);
-    // console.log(result)
     return result;
   })
 }
@@ -181,11 +178,12 @@ async function generateMatches(prevMatches) {
   console.log(`total people: ${numPeople}\ntotal Men: ${numMen}\ntotal Females: ${numFemales}`)
   const results = {}
   for (let i = 0; i < numPeople; i++) {
+    const match = people[i];
     const suitors = filterBasedOnSex(people[i], people);
     const compatibleHeight = filterOnHeight(people[i], suitors)
     const compatibleLocation = filterOnLocation(people[i], compatibleHeight);
     const religiousMatchingFemales = filterBasedOnReligion(people[i], compatibleLocation)
-    const match = people[i];
+    
     const resultingRankings = religiousMatchingFemales.map(person => {
       let score = Object.keys(match.characteristicsP).reduce((acc, key) => {
         if (match.characteristicsP[key] === true && person.characteristics[key] === true) {
@@ -217,6 +215,15 @@ async function generateMatches(prevMatches) {
       sex: match.sex
     }
   }
+  // const p = Object.keys(results);
+  // let count = 0;
+  // for (let i = 0; i < p.length; i++) {
+  //   if (results[p[i]].sex === 'Male' && results[p[i]].compatiblePartners.length > 0) {
+  //     console.log(results[p[i]])
+  //     count++
+  //   }
+  // }
+  // console.log(count)
 
   const keys = Object.keys(results);
 
@@ -249,7 +256,7 @@ async function generateMatches(prevMatches) {
     const compatiblePartners = male.compatiblePartners;
     let i = 0;
     while (i < compatiblePartners.length) {
-      if (compatiblePartners[i].compatabilityScore >= 5) {
+      if (compatiblePartners[i].compatabilityScore >= 0) {
         if (prelimMatches.hasOwnProperty(male.person)) {
           prelimMatches[male.person].push(compatiblePartners[i].name)
         }
@@ -260,13 +267,14 @@ async function generateMatches(prevMatches) {
       i++;
     }
   }
+  // console.log(Object.keys(prelimMatches).length)
 
   const preMatches = {};
   for (let female of females) {
     const compatiblePartners = female.compatiblePartners;
     let i = 0;
     while (i < compatiblePartners.length) {
-      if (compatiblePartners[i].compatabilityScore >= 5) {
+      if (compatiblePartners[i].compatabilityScore >= 0) {
         if (preMatches.hasOwnProperty(female.person)) {
           preMatches[female.person].push(compatiblePartners[i].name)
         }
@@ -278,11 +286,13 @@ async function generateMatches(prevMatches) {
     }
   }
 
+
   const numMatches = {}
   const girlMatches = {};
   for (const name of Object.keys(preMatches)) {
     for (const match of preMatches[name]) {
       if (prelimMatches[match] && prelimMatches[match].includes(name)) {
+        // dont have to check both ways because in prevMatches if two people match they are on each others list
         if (!prevMatches[name] || !prevMatches[name].hasOwnProperty(match)) {
           if (!numMatches[name] && !numMatches[match]) {
             if (girlMatches.hasOwnProperty(name)) {
@@ -295,7 +305,7 @@ async function generateMatches(prevMatches) {
             numMatches[match] = 1;
           }
           else if (numMatches[name] && numMatches[match]) {
-            if ((numMatches[name] < 3 && numMatches[match] < 3)) {
+            if ((numMatches[name] < 2 && numMatches[match] < 4)) {
               if (girlMatches.hasOwnProperty(name)) {
                 girlMatches[name].push(match);
               }
@@ -307,7 +317,7 @@ async function generateMatches(prevMatches) {
             }
           }
           else if (!numMatches[name]) {
-            if (numMatches[match] < 3) {
+            if (numMatches[match] < 2) {
               if (girlMatches.hasOwnProperty(name)) {
                 girlMatches[name].push(match);
               }
@@ -319,7 +329,7 @@ async function generateMatches(prevMatches) {
             }
           }
           else {
-            if (numMatches[name] < 3) {
+            if (numMatches[name] < 2) {
               if (girlMatches.hasOwnProperty(name)) {
                 girlMatches[name].push(match);
               }
@@ -358,14 +368,14 @@ const getConnectors = async (title, document) => {
 }
 
 const rankAtrributes = async () => {
-  const doc = await data.getDoc();
+  const doc = await data.getDocument();
   await doc.loadInfo(); 
   const sheet = doc.sheetsByTitle['MoDate Responses'];
   const rows = await sheet.getRows();
   const result = {};
   rows.map(row => {
     const data = row['_rawData'][12];
-    if (row['_rawData'][5] === 'Female') {
+    if (row['_rawData'][5] === 'Male') {
       const attrs = data.split(', ');
       attrs.forEach(attr => {
         if (result.hasOwnProperty(attr)) {
@@ -377,6 +387,7 @@ const rankAtrributes = async () => {
       })
     }
   })
+  console.log(result)
 }
 
 const addMatches = async (title, prevMatches, fileName, document) => {
@@ -393,6 +404,7 @@ const addMatches = async (title, prevMatches, fileName, document) => {
   );
 
   const girlMatches = await generateMatches(prevMatches);
+  console.log(Object.keys(girlMatches).length)
   const keys = Object.keys(girlMatches);
   const directory = await getConnectors('MoDate Responses', document);
   const newRows = []
@@ -427,7 +439,7 @@ const addMatches = async (title, prevMatches, fileName, document) => {
   //   const connectors = Object.keys(emailData);
   //   console.log(connectors.length)
   //   // console.log(emailData)
-  //   for (let i = 0; i < 1; i++) {
+  //   for (let i = 0; i < connectors.length; i++) {
   //     const message = createMessage(connectors[i], emailData[connectors[i]].matches);
   //     console.log(connectors[i])
   //     setTimeout(() => {sendEmail('michaellosev75@gmail.com', message, i)}, 1000 * i)
@@ -644,7 +656,7 @@ else if (mode === 'success') {
                 console.log(connectors.length)
                 // console.log(emailData)
                 let k = 0;
-                for (let i = 96; i < connectors.length; i++) {
+                for (let i = 93; i < connectors.length; i++) {
                   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
                   console.log(connectors[i])
                   setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * k)
@@ -669,5 +681,7 @@ else if (mode === 'success') {
 }
 else {
   console.error("Incorrect number of arguments. Try running `$ node algo dev/test run` or `$ node algo dev/test success`");
-  sendEmail('michaellosev75@gmail.com', 'hello', 1)
+  // sendEmail('michaellosev75@gmail.com', 'hello', 1)
+  generateMatches(prevMatches)
+  // rankAtrributes();
 }
