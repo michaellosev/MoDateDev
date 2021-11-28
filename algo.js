@@ -6,6 +6,8 @@ import { MYERSBRIGGS, LEGEND, RANKING, G, LG, B, Y, R} from "./consts/algoConsta
 import mailer from "./mailer.js";
 import transporter from "./mailer.js";
 import { readFile } from 'fs/promises';
+import sgMail from '@sendgrid/mail';
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 const prevMatches = JSON.parse(
   await readFile(
@@ -319,7 +321,7 @@ async function generateMatches(prevMatches) {
           else if (!numMatches[name]) {
             if (numMatches[match] < 2) {
               if (girlMatches.hasOwnProperty(name)) {
-                girlMatches[name].push(match);
+                girlMatches[name].push(match); 
               }
               else {
                 girlMatches[name] = [match];
@@ -392,67 +394,69 @@ const rankAtrributes = async () => {
 
 const addMatches = async (title, prevMatches, fileName, document) => {
 
-  if (document.sheetsByTitle[title] !== undefined) {
-    await document.sheetsByTitle[title].delete()
-  }
+  // if (document.sheetsByTitle[title] !== undefined) {
+  //   await document.sheetsByTitle[title].delete()
+  // }
 
-  const sheet = await document.addSheet(
-    { 
-      title: title,
-      headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
-    }
-  );
+  // const sheet = await document.addSheet(
+  //   { 
+  //     title: title,
+  //     headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
+  //   }
+  // );
 
   const girlMatches = await generateMatches(prevMatches);
-  console.log(Object.keys(girlMatches).length)
-  const keys = Object.keys(girlMatches);
-  const directory = await getConnectors('MoDate Responses', document);
-  const newRows = []
-  for (let key of keys) {
-    const guyMatches = girlMatches[key]
-    for (let guy of guyMatches) {
-      if (!prevMatches.hasOwnProperty(key)) {
-        prevMatches[key] = {[guy]: 1};
-      }
-      else {
-        prevMatches[key][guy] = 1;
-      }
-      if (!prevMatches.hasOwnProperty(guy)) {
-        prevMatches[guy] = {[key]: 1};
-      }
-      else {
-        prevMatches[guy][key] = 1;
-      }
-      newRows.push(
-        {
-          ConnectorForGirl: directory[key][0],
-          'Girls Phone Number': directory[key][1],
-          ConnectorForGuy: directory[guy][0],
-          'Guys Phone Number': directory[guy][1],
-          girlAlias: key,
-          guyAlias: guy
-        }
-      )
-    }
-  }
-  // dataForEmail(girlMatches, spreadSheet).then(emailData => {
-  //   const connectors = Object.keys(emailData);
-  //   console.log(connectors.length)
-  //   // console.log(emailData)
-  //   for (let i = 0; i < connectors.length; i++) {
-  //     const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-  //     console.log(connectors[i])
-  //     setTimeout(() => {sendEmail('michaellosev75@gmail.com', message, i)}, 1000 * i)
-  //     // emailData[connectors[i]].email
+  // console.log(Object.keys(girlMatches).length)
+  // const keys = Object.keys(girlMatches);
+  // const directory = await getConnectors('MoDate Responses', document);
+  // const newRows = []
+  // for (let key of keys) {
+  //   const guyMatches = girlMatches[key]
+  //   for (let guy of guyMatches) {
+  //     if (!prevMatches.hasOwnProperty(key)) {
+  //       prevMatches[key] = {[guy]: 1};
+  //     }
+  //     else {
+  //       prevMatches[key][guy] = 1;
+  //     }
+  //     if (!prevMatches.hasOwnProperty(guy)) {
+  //       prevMatches[guy] = {[key]: 1};
+  //     }
+  //     else {
+  //       prevMatches[guy][key] = 1;
+  //     }
+  //     newRows.push(
+  //       {
+  //         ConnectorForGirl: directory[key][0],
+  //         'Girls Phone Number': directory[key][1],
+  //         ConnectorForGuy: directory[guy][0],
+  //         'Guys Phone Number': directory[guy][1],
+  //         girlAlias: key,
+  //         guyAlias: guy
+  //       }
+  //     )
   //   }
+  // }
+  dataForEmail(girlMatches, spreadSheet).then(emailData => {
+    const connectors = Object.keys(emailData);
+    console.log(connectors.length)
+    // console.log(emailData)
+    let recipients = ['michaellosev75@gmail.com', 'modate613@gmail.com']
+    for (let i = 40; i < connectors.length; i++) {
+      // const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+      console.log(emailData[connectors[i]].email)
+      // sendMailTwilio(message, recipients[i]);
+      // setTimeout(() => {sendEmail('michaellosev75@gmail.com', message, i)}, 1000 * i)
+      // emailData[connectors[i]].email
+    }
+  })
+  // await sheet.addRows(newRows)
+  // fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
+  //   if (err) throw err;
   // })
-  await sheet.addRows(newRows)
-  fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
-    if (err) throw err;
-  })
-  fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
-    if (err) throw err;
-  })
+  // fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
+  //   if (err) throw err;
+  // })
 }
 
 const dataForEmail = async (results, document) => {
@@ -627,6 +631,24 @@ const createMessage = (connector, emailData) => {
   return message;
 }
 
+const sendMailTwilio = (msg, recipient) => {
+  const email = {
+    to: recipient,
+    from: 'modate613@gmail.com',
+    subject: `MoDate Matches for week ${new Date().toLocaleDateString()} - Do Not Respond`,
+    text: 'and easy to do anywhere, even with Node.js',
+    html: msg,
+  }
+  sgMail
+    .send(email)
+    .then(() => {
+      console.log(`Email sent to ${recipient}`)
+    })
+    .catch((error) => {
+      console.error(error)
+    })
+}
+
 // Run the Algorithm
 const mode = process.argv[3];
 
@@ -655,14 +677,15 @@ else if (mode === 'success') {
                 const connectors = Object.keys(emailData);
                 console.log(connectors.length)
                 // console.log(emailData)
-                let k = 0;
-                for (let i = 93; i < connectors.length; i++) {
-                  const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-                  console.log(connectors[i])
-                  setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * k)
-                  k++;
+                // let k = 0;
+                // for (let i = 40; i < connectors.length; i++) {
+                //   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+                  // console.log(connectors[i])
+                  // sendMailTwilio(message, emailData[connectors[i]].email);
+                  // setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * k)
+                  // k++;
                   // emailData[connectors[i]].email
-                }
+                // }
               })
             }
           })
@@ -682,6 +705,10 @@ else if (mode === 'success') {
 else {
   console.error("Incorrect number of arguments. Try running `$ node algo dev/test run` or `$ node algo dev/test success`");
   // sendEmail('michaellosev75@gmail.com', 'hello', 1)
-  generateMatches(prevMatches)
+  // generateMatches(prevMatches)
   // rankAtrributes();
+  let recipients = ['michaellosev75@gmail.com']
+  for (let i = 0; i < 1; i++) {
+    sendMailTwilio('<strong>and easy to do anywhere, even with Node.js</strong>', recipients[0])
+  }
 }

@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sendgrid/mail": "^7.6.0",
     "dotenv": "^8.2.0",
     "google-spreadsheet": "^3.1.15",
     "nodemailer": "^6.6.3"
