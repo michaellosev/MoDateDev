@@ -85,8 +85,8 @@ const accessSpreadsheet = (apiKey) => {
         profession: data[24],
         religiousAddData: data[25],
         generalAddData: data[26],
-        minAge: +data[29],
-        maxAge: +data[30],
+        minAge: isNaN(data[29]) ? null : +data[29],
+        maxAge: isNaN(data[30]) ? null : +data[30],
         willingToDate: data[31],
         height: data[32],
         minHeight: data[33]

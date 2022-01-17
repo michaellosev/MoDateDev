@@ -15,6 +15,7 @@ const prevMatches = JSON.parse(
   )
 );
 
+
 const spreadSheet = await data.getDocument();
 await spreadSheet.loadInfo()
 
@@ -44,15 +45,30 @@ const filterBasedOnReligion = (match, people) => {
     (person.religiousObservanceP.aliyah === "Very Important" && match.religiousObservance.aliyah !== "Yes")) {
       return false
     }
-    else if (!isNaN(match.minAge) || !isNaN(person.minAge)) {
-      if (!isNaN(match.minAge)) {
+    // if either of their minAges is defined
+    else if (match.minAge > 0 || person.minAge > 0) {
+      // if both of their minAges are defined
+      if (match.minAge > 0 && person.minAge > 0) {
         if (person.age < match.minAge || person.age > match.maxAge) {
           return false;
         }
-        if (!isNaN(person.minAge)) {
-          if (match.age < person.minAge || match.age > person.maxAge) {
-            return false;
-          }
+        if (match.age < person.minAge || match.age > person.maxAge) {
+          return false;
+        }
+        return true;
+      }
+      // matches min age is defined
+      else if (match.minAge > 0) {
+        if (person.age < match.minAge || person.age > match.maxAge) {
+          return false;
+        }
+        return true;
+        
+      }
+      // persons min age is defined
+      else{
+        if (match.age < person.minAge || match.age > person.maxAge) {
+          return false;
         }
         return true;
       }
@@ -185,6 +201,9 @@ async function generateMatches(prevMatches) {
     const compatibleHeight = filterOnHeight(people[i], suitors)
     const compatibleLocation = filterOnLocation(people[i], compatibleHeight);
     const religiousMatchingFemales = filterBasedOnReligion(people[i], compatibleLocation)
+    // if (match.alias === 'DRGF001') {
+    //   console.log(religiousMatchingFemales.length)
+    // }
     
     const resultingRankings = religiousMatchingFemales.map(person => {
       let score = Object.keys(match.characteristicsP).reduce((acc, key) => {
@@ -226,6 +245,7 @@ async function generateMatches(prevMatches) {
   //   }
   // }
   // console.log(count)
+
 
   const keys = Object.keys(results);
 
@@ -288,10 +308,39 @@ async function generateMatches(prevMatches) {
     }
   }
 
+  const preKeys = Object.keys(preMatches);
+  // console.log(preKeys)
+  let girlsWithNoMatches = [];
+  for (let i = 0; i < preKeys.length; i++) {
+    if (!prevMatches.hasOwnProperty(preKeys[i])) {
+      girlsWithNoMatches.push(preKeys[i])
+    }
+  }
+  // console.log(females.length)
+  // console.log(preKeys.length)
+
+  // for (let i = 0; i < girlsWithNoMatches.length; i++) {
+  //   console.log(preMatches[girlsWithNoMatches[i]])
+  // }
+
+  const girlsMatchesSorted = Object.keys(preMatches);
+  girlsMatchesSorted.sort((a, b) =>{
+    if (girlsWithNoMatches.includes(a) && !girlsWithNoMatches.includes(b)) {
+      return -1;
+    }
+    else if (!girlsWithNoMatches.includes(a) && girlsWithNoMatches.includes(b)) {
+      return 1;
+    }
+    else {
+      return 0
+    }
+  })
+
+  
 
   const numMatches = {}
   const girlMatches = {};
-  for (const name of Object.keys(preMatches)) {
+  for (const name of girlsMatchesSorted) {
     for (const match of preMatches[name]) {
       if (prelimMatches[match] && prelimMatches[match].includes(name)) {
         // dont have to check both ways because in prevMatches if two people match they are on each others list
@@ -319,7 +368,7 @@ async function generateMatches(prevMatches) {
             }
           }
           else if (!numMatches[name]) {
-            if (numMatches[match] < 2) {
+            if (numMatches[match] < 4) {
               if (girlMatches.hasOwnProperty(name)) {
                 girlMatches[name].push(match); 
               }
@@ -364,8 +413,11 @@ const getConnectors = async (title, document) => {
   rows.forEach(row => {
     const arr = row['_rawData'];
     // console.log(arr)
-    directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()][0], dict[arr[3].trim().toLowerCase()][1]];
+    if (arr[2] !== 'TRUE') {
+      directory[arr[1]] = [arr[3], dict[arr[3].trim().toLowerCase()][0], dict[arr[3].trim().toLowerCase()][1]];
+    }
   })
+  // console.log(directory)
   return directory;
 }
 
@@ -394,69 +446,69 @@ const rankAtrributes = async () => {
 
 const addMatches = async (title, prevMatches, fileName, document) => {
 
-  // if (document.sheetsByTitle[title] !== undefined) {
-  //   await document.sheetsByTitle[title].delete()
-  // }
+  if (document.sheetsByTitle[title] !== undefined) {
+    await document.sheetsByTitle[title].delete()
+  }
 
-  // const sheet = await document.addSheet(
-  //   { 
-  //     title: title,
-  //     headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
-  //   }
-  // );
+  const sheet = await document.addSheet(
+    { 
+      title: title,
+      headerValues: ['ConnectorForGirl', 'Girls Phone Number', 'ConnectorForGuy', 'Guys Phone Number',  'girlAlias', 'guyAlias'] 
+    }
+  );
 
   const girlMatches = await generateMatches(prevMatches);
-  // console.log(Object.keys(girlMatches).length)
-  // const keys = Object.keys(girlMatches);
-  // const directory = await getConnectors('MoDate Responses', document);
-  // const newRows = []
-  // for (let key of keys) {
-  //   const guyMatches = girlMatches[key]
-  //   for (let guy of guyMatches) {
-  //     if (!prevMatches.hasOwnProperty(key)) {
-  //       prevMatches[key] = {[guy]: 1};
-  //     }
-  //     else {
-  //       prevMatches[key][guy] = 1;
-  //     }
-  //     if (!prevMatches.hasOwnProperty(guy)) {
-  //       prevMatches[guy] = {[key]: 1};
-  //     }
-  //     else {
-  //       prevMatches[guy][key] = 1;
-  //     }
-  //     newRows.push(
-  //       {
-  //         ConnectorForGirl: directory[key][0],
-  //         'Girls Phone Number': directory[key][1],
-  //         ConnectorForGuy: directory[guy][0],
-  //         'Guys Phone Number': directory[guy][1],
-  //         girlAlias: key,
-  //         guyAlias: guy
-  //       }
-  //     )
-  //   }
-  // }
-  dataForEmail(girlMatches, spreadSheet).then(emailData => {
-    const connectors = Object.keys(emailData);
-    console.log(connectors.length)
-    // console.log(emailData)
-    let recipients = ['michaellosev75@gmail.com', 'modate613@gmail.com']
-    for (let i = 40; i < connectors.length; i++) {
-      // const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-      console.log(emailData[connectors[i]].email)
-      // sendMailTwilio(message, recipients[i]);
-      // setTimeout(() => {sendEmail('michaellosev75@gmail.com', message, i)}, 1000 * i)
-      // emailData[connectors[i]].email
+  console.log(Object.keys(girlMatches).length)
+  const keys = Object.keys(girlMatches);
+  const directory = await getConnectors('MoDate Responses', document);
+  const newRows = []
+  for (let key of keys) {
+    const guyMatches = girlMatches[key]
+    for (let guy of guyMatches) {
+      if (!prevMatches.hasOwnProperty(key)) {
+        prevMatches[key] = {[guy]: 1};
+      }
+      else {
+        prevMatches[key][guy] = 1;
+      }
+      if (!prevMatches.hasOwnProperty(guy)) {
+        prevMatches[guy] = {[key]: 1};
+      }
+      else {
+        prevMatches[guy][key] = 1;
+      }
+      newRows.push(
+        {
+          ConnectorForGirl: directory[key][0],
+          'Girls Phone Number': directory[key][1],
+          ConnectorForGuy: directory[guy][0],
+          'Guys Phone Number': directory[guy][1],
+          girlAlias: key,
+          guyAlias: guy
+        }
+      )
     }
+  }
+  // dataForEmail(girlMatches, spreadSheet).then(emailData => {
+  //   const connectors = Object.keys(emailData);
+  //   console.log(connectors.length)
+  //   // console.log(emailData)
+  //   let recipients = ['michaellosev75@gmail.com', 'modate613@gmail.com']
+  //   // for (let i = 40; i < connectors.length; i++) {
+  //     // const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+  //     // console.log(emailData[connectors[i]].email)
+  //     // sendMailTwilio(message, recipients[i]);
+  //     // setTimeout(() => {sendEmail('michaellosev75@gmail.com', message, i)}, 1000 * i)
+  //     // emailData[connectors[i]].email
+  //   // }
+  // })
+  await sheet.addRows(newRows)
+  fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
   })
-  // await sheet.addRows(newRows)
-  // fs.writeFile('girlMatches.json', JSON.stringify(girlMatches, null, 2), { flag: 'w+' }, (err) => {
-  //   if (err) throw err;
-  // })
-  // fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
-  //   if (err) throw err;
-  // })
+  fs.writeFile(fileName, JSON.stringify(prevMatches, null, 2), { flag: 'w+' }, (err) => {
+    if (err) throw err;
+  })
 }
 
 const dataForEmail = async (results, document) => {
@@ -649,6 +701,19 @@ const sendMailTwilio = (msg, recipient) => {
     })
 }
 
+const modatersToJson = async () => {
+  let modaters = await data.getData();
+  modaters.splice(0, 100)
+  fs.writeFile('./modaters.json', JSON.stringify(modaters), err => {
+    if (err) {
+      console.log(err)
+    }
+    else {
+      console.log('file written successfully!')
+    }
+  })
+}
+
 // Run the Algorithm
 const mode = process.argv[3];
 
@@ -677,15 +742,15 @@ else if (mode === 'success') {
                 const connectors = Object.keys(emailData);
                 console.log(connectors.length)
                 // console.log(emailData)
-                // let k = 0;
-                // for (let i = 40; i < connectors.length; i++) {
-                //   const message = createMessage(connectors[i], emailData[connectors[i]].matches);
-                  // console.log(connectors[i])
+                let k = 0;
+                for (let i = 92; i < connectors.length; i++) {
+                  const message = createMessage(connectors[i], emailData[connectors[i]].matches);
+                  console.log(connectors[i])
                   // sendMailTwilio(message, emailData[connectors[i]].email);
-                  // setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * k)
-                  // k++;
+                  setTimeout(() => {sendEmail(emailData[connectors[i]].email, message, i)}, 1000 * k)
+                  k++;
                   // emailData[connectors[i]].email
-                // }
+                }
               })
             }
           })
@@ -702,13 +767,15 @@ else if (mode === 'success') {
     }
   })
 }
+
 else {
   console.error("Incorrect number of arguments. Try running `$ node algo dev/test run` or `$ node algo dev/test success`");
-  // sendEmail('michaellosev75@gmail.com', 'hello', 1)
+  sendEmail('michaellosev75@gmail.com', 'hello', 1)
+  // modatersToJson()
   // generateMatches(prevMatches)
   // rankAtrributes();
-  let recipients = ['michaellosev75@gmail.com']
-  for (let i = 0; i < 1; i++) {
-    sendMailTwilio('<strong>and easy to do anywhere, even with Node.js</strong>', recipients[0])
-  }
+  // let recipients = ['michaellosev75@gmail.com']
+  // for (let i = 0; i < 1; i++) {
+  //   sendMailTwilio('<strong>and easy to do anywhere, even with Node.js</strong>', recipients[0])
+  // }
 }
